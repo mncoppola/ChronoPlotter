@@ -329,13 +329,13 @@ class ChronoPlotter(QWidget):
 		self.series_grid.addWidget(date_header, 0, 4)
 
 		for i, v in enumerate(self.series):
-			dirname = v[1]
+			series_name = v[1]
 			csv_data = v[2]
 			charge_weight = v[3]
 			checkbox = v[4]
 
 			self.series_grid.addWidget(checkbox, i + 1, 0)
-			self.series_grid.addWidget(QLabel(dirname), i + 1, 1)
+			self.series_grid.addWidget(QLabel(series_name), i + 1, 1)
 
 			charge_weight_layout = QHBoxLayout()
 			charge_weight_layout.addWidget(charge_weight)
@@ -356,14 +356,14 @@ class ChronoPlotter(QWidget):
 
 		for val in self.series:
 			series_num = val[0]
-			dirname = val[1]
+			series_name = val[1]
 			csv_data = val[2]
 			charge = val[3].value()
 			checkbox = val[4]
 			if checkbox.isChecked() and charge == 0:
 				msg = QMessageBox()
 				msg.setIcon(QMessageBox.Critical)
-				msg.setText("Series %s is missing charge weight!" % dirname)
+				msg.setText("Series %s is missing charge weight!" % series_name)
 				msg.setWindowTitle("Error")
 				msg.exec_()
 				return
@@ -379,13 +379,13 @@ class ChronoPlotter(QWidget):
 
 		for i, val in enumerate(self.series):
 			series_num = val[0]
-			dirname = val[1]
+			series_name = val[1]
 			csv_data = val[2]
 			charge = val[3].value()
 			checkbox = val[4]
 
 			if not checkbox.isChecked():
-				print("Series %s is unchecked, skipping..." % dirname)
+				print("Series %s is unchecked, skipping..." % series_name)
 				continue
 
 			print("Series %04d (%.1fgr)" % (series_num, charge))
@@ -408,8 +408,6 @@ class ChronoPlotter(QWidget):
 			xticks.append(charge)
 
 			if self.graph_type.currentIndex() == self.SCATTER:
-				delta_y = lowest - 7
-
 				points = []
 
 				for v in m_velocs:
@@ -420,8 +418,6 @@ class ChronoPlotter(QWidget):
 				plt.plot(scatter_x, scatter_y, "o", color="#0536b0", markeredgewidth=0, markersize=6)
 
 			else:
-				delta_y = average - stdev
-
 				plt.errorbar(charge, average, fmt="o", yerr=stdev, markersize=5, capsize=3, elinewidth=1, ecolor="black", markerfacecolor="#0536b0", markeredgecolor="#0536b0")
 
 		# Now that we've plotted all the points, we can draw the bounding boxes around each string of shots (if we're doing a scatter plot)
@@ -431,13 +427,13 @@ class ChronoPlotter(QWidget):
 
 		for i, val in enumerate(self.series):
 			series_num = val[0]
-			dirname = val[1]
+			series_name = val[1]
 			csv_data = val[2]
 			charge = val[3].value()
 			checkbox = val[4]
 
 			if not checkbox.isChecked():
-				print("Series %s is unchecked, skipping..." % dirname)
+				print("Series %s is unchecked, skipping..." % series_name)
 				continue
 
 			print("Series %04d (%.1fgr)" % (series_num, charge))
