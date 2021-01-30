@@ -166,19 +166,30 @@ class ChronoPlotter(QWidget):
 		groupBox_options.setLayout(self.options_layout)
 
 		# Layout to horizontally position series data and options
-		layout = QHBoxLayout()
-		layout.addWidget(groupBox, stretch=2)
-		layout.addWidget(groupBox_options, stretch=1)
+		bottom_layout = QHBoxLayout()
+		bottom_layout.addWidget(groupBox, stretch=2)
+		bottom_layout.addWidget(groupBox_options, stretch=1)
 
 		self.dir_btn = QPushButton("Select directory", self)
 		self.dir_btn.clicked.connect(self.dirDialog)
 		self.dir_btn.setMinimumWidth(200)
 		self.dir_btn.setMaximumWidth(200)
 
+		# About link
+		self.about = QPushButton("About this app", self)
+		self.about.clicked.connect(self.showAbout)
+		#self.about = QLabel("About this app")
+		#self.about.linkActivated.connect(self.showAbout)
+
+		top_layout = QHBoxLayout()
+		top_layout.addWidget(self.dir_btn)
+		top_layout.addStretch()
+		top_layout.addWidget(self.about)
+
 		# Layout to vertically position file dialog button and panels
 		layout_vert = QVBoxLayout(self)
-		layout_vert.addWidget(self.dir_btn)
-		layout_vert.addLayout(layout)
+		layout_vert.addLayout(top_layout)
+		layout_vert.addLayout(bottom_layout)
 
 		self.setGeometry(300, 300, 1000, 500)
 		self.setWindowTitle("ChronoPlotter")
@@ -555,6 +566,14 @@ class ChronoPlotter(QWidget):
 	def saveGraph(self):
 		print("saveGraph clicked!")
 		self.showGraph(save_without_showing=True)
+
+	def showAbout(self):
+		print("showAbout clicked!")
+		msg = QMessageBox()
+		msg.setText("""<center><h1>ChronoPlotter v1.0.0</h1>By Michael Coppola<br><a href="https://github.com/mncoppola/ChronoPlotter">github.com/mncoppola/ChronoPlotter</a><br><br>If you found this tool helpful, share some primers with a friend in need.<br><br>Or consider contributing to:<br><a href="https://www.doctorswithoutborders.org/">Doctors Without Borders</a><br><a href="https://www.navysealfoundation.org/">The Navy SEAL Foundation</a><br><a href="https://eji.org/">Equal Justice Initiative</a><br><a href="https://www.mskcc.org/">Memorial Sloan Kettering Cancer Center</a>""")
+		msg.setWindowTitle("About ChronoPlotter")
+		msg.exec_()
+
 
 
 app = QApplication([])
