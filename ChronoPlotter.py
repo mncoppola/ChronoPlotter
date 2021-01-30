@@ -503,15 +503,17 @@ class ChronoPlotter(QWidget):
 					else:
 						sign = "+"
 
-					if abs(delta) < 25:
+					abs_delta = abs(delta)
+
+					if abs_delta < 25:
 						facecolor = "#00e810"
-						alpha = (1 - (delta / 25.0)) * 0.6
+						alpha = (1 - (abs_delta / 25.0)) * 0.6
 					else:
 						facecolor = "white"
 						alpha = 1.0
 
 					print("Placing velocity delta annotation")
-					plt.annotate("%s%d" % (sign, delta), xy=(charge, bottom_label), ha="center", va="top", bbox=dict(boxstyle="square", facecolor=facecolor, alpha=alpha, linewidth=0))
+					plt.annotate("%s%d" % (sign, abs_delta), xy=(charge, bottom_label), ha="center", va="top", bbox=dict(boxstyle="square", facecolor=facecolor, alpha=alpha, linewidth=0))
 
 				last_average = average
 
@@ -570,7 +572,7 @@ class ChronoPlotter(QWidget):
 	def showAbout(self):
 		print("showAbout clicked!")
 		msg = QMessageBox()
-		msg.setText("""<center><h1>ChronoPlotter v1.0.0</h1>By Michael Coppola<br><a href="https://github.com/mncoppola/ChronoPlotter">github.com/mncoppola/ChronoPlotter</a><br><br>If you found this tool helpful, share some primers with a friend in need.<br><br>Or consider contributing to:<br><a href="https://www.doctorswithoutborders.org/">Doctors Without Borders</a><br><a href="https://www.navysealfoundation.org/">The Navy SEAL Foundation</a><br><a href="https://eji.org/">Equal Justice Initiative</a><br><a href="https://www.mskcc.org/">Memorial Sloan Kettering Cancer Center</a>""")
+		msg.setText("""<center><h1>ChronoPlotter v0.0.1</h1>By Michael Coppola<br><a href="https://github.com/mncoppola/ChronoPlotter">github.com/mncoppola/ChronoPlotter</a><br><br>If you found this tool helpful, share some primers with a friend in need.<br><br>Or consider contributing to:<br><a href="https://www.doctorswithoutborders.org/">Doctors Without Borders</a><br><a href="https://www.navysealfoundation.org/">The Navy SEAL Foundation</a><br><a href="https://eji.org/">Equal Justice Initiative</a><br><a href="https://www.mskcc.org/">Memorial Sloan Kettering Cancer Center</a>""")
 		msg.setWindowTitle("About ChronoPlotter")
 		msg.exec_()
 
