@@ -84,7 +84,6 @@ class ChronoPlotter(QWidget):
 		self.MPS = 1
 
 		self.series = []
-		self.seriesCheckBoxes = []
 		self.scroll_area = None
 
 		self.initUI()
@@ -244,7 +243,7 @@ class ChronoPlotter(QWidget):
 		pattern = re.compile("^SR\d\d\d\d")
 
 		for fname in os.listdir(path):
-			print(fname)
+			#print(fname)
 
 			fpath = os.path.join(path, fname)
 
@@ -345,6 +344,8 @@ class ChronoPlotter(QWidget):
 			charge_weight = v[3]
 			checkbox = v[4]
 
+			checkbox.stateChanged.connect(self.seriesCheckBoxChangedCb(i + 1))
+
 			self.series_grid.addWidget(checkbox, i + 1, 0)
 			self.series_grid.addWidget(QLabel(series_name), i + 1, 1)
 
@@ -361,6 +362,33 @@ class ChronoPlotter(QWidget):
 		self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 		self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 		self.scroll_area.setWidgetResizable(True)
+
+	# Lambdas in loops are hard
+	def seriesCheckBoxChangedCb(self, idx):
+		return lambda: self.seriesCheckBoxChanged(idx)
+
+	def seriesCheckBoxChanged(self, idx):
+		checkbox = self.series_grid.itemAtPosition(idx, 0).widget()
+		series_name = self.series_grid.itemAtPosition(idx, 1).widget()
+		charge_weight = self.series_grid.itemAtPosition(idx, 2).layout().itemAt(0).widget()
+		series_result = self.series_grid.itemAtPosition(idx, 3).widget()
+		series_date = self.series_grid.itemAtPosition(idx, 4).widget()
+
+		if checkbox.isChecked():
+			action = "checked"
+			series_name.setStyleSheet("")
+			charge_weight.setEnabled(True)
+			series_result.setStyleSheet("")
+			series_date.setStyleSheet("")
+		else:
+			action = "unchecked"
+			series_name.setStyleSheet("color: #878787")
+			charge_weight.setEnabled(False)
+			series_result.setStyleSheet("color: #878787")
+			series_date.setStyleSheet("color: #878787")
+
+		print("Grid row %d was %s" % (idx, action))
+
 
 	def showGraph(self, save_without_showing=False):
 		print("showGraph clicked!")
