@@ -8,6 +8,7 @@ import matplotlib
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
+from pathlib import Path
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QFileDialog, QGridLayout, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea, QFormLayout, QGroupBox, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QDoubleSpinBox, QStackedWidget, QMessageBox
@@ -25,15 +26,18 @@ def extract_labradar_series_data(csvfile):
 			csv_data["total_shots"] = int(row[1])
 		elif idx == 6:
 			csv_data["v_units"] = row[1]
-		elif idx == 12:
-			csv_data["v_lowest"] = int(float(row[1]))
-		elif idx == 13:
-			csv_data["v_highest"] = int(float(row[1]))
+#		elif idx == 12:
+#			csv_data["v_lowest"] = int(float(row[1]))
+#		elif idx == 13:
+#			csv_data["v_highest"] = int(float(row[1]))
 		elif idx > 17:
 			if idx == 18:
 				csv_data["first_date"] = row[15]
 				csv_data["first_time"] = row[16]
 			csv_data["m_velocs"].append(int(row[1]))
+
+	csv_data["v_lowest"] = min(csv_data["m_velocs"])
+	csv_data["v_highest"] = max(csv_data["m_velocs"])
 
 	return csv_data
 
@@ -56,15 +60,17 @@ def extract_magnetospeed_series_data(csvfile):
 			if row[0] == "Series" and row[2] == "Shots:":
 				cur["series_num"] = int(row[1])
 				cur["total_shots"] = int(row[3])
-			elif row[0] == "Min":
-				cur["v_lowest"] = int(row[1])
-				cur["v_highest"] = int(row[3])
+#			elif row[0] == "Min":
+#				cur["v_lowest"] = int(row[1])
+#				cur["v_highest"] = int(row[3])
 			elif str(row[0]).isdigit():
 				print("Adding velocity %d" % int(row[2]))
 				cur["m_velocs"].append(int(row[2]))
 				if len(cur["m_velocs"]) == 1:
 					cur["v_units"] = row[3]
 			elif row[0] == "----":
+				cur["v_lowest"] = min(cur["m_velocs"])
+				cur["v_highest"] = max(cur["m_velocs"])
 				csv_datas.append(cur)
 				cur = {"m_velocs": [], "first_date": "", "first_time": ""}
 
@@ -601,7 +607,7 @@ class ChronoPlotter(QWidget):
 
 			if self.vd_checkbox.isChecked():
 				if last_average != None:
-					delta = average - last_average
+					delta = int(average - last_average)
 					if delta < 0:
 						sign = "-"
 					else:
@@ -616,7 +622,7 @@ class ChronoPlotter(QWidget):
 						facecolor = "white"
 						alpha = 1.0
 
-					print("Placing velocity delta annotation")
+					print("Placing velocity delta annotation for delta %d" % delta)
 					plt.annotate("%s%d" % (sign, abs_delta), xy=(charge, bottom_label), ha="center", va="top", bbox=dict(boxstyle="square", facecolor=facecolor, alpha=alpha, linewidth=0))
 
 				last_average = average
@@ -657,17 +663,40 @@ class ChronoPlotter(QWidget):
 		plt.xticks(xticks)
 
 		if save_without_showing:
-			path = QFileDialog.getSaveFileName(self, "Save graph as image")
-			print(path)
-			figure.savefig(path[0])
+			filters = "PNG image (*.png);;SVG image (*.svg);;PDF file (*.pdf)"
+			path = QFileDialog().getSaveFileName(self, "Save graph as image", "graph.png", filters)[0]
+			print("User selected save path '%s'" % path)
+
+			# User canceled file dialog
+			if path == "":
+				print("No path selected, bailing")
+
+				# Close the figure and window
+				ax.cla()
+				figure.clf()
+				plt.close("all")
+				return
+
+			p = Path(path)
+			# If user specified no file extension, or an invalid file extension was given, append .png and call it a day
+			if (p.suffix == "") or (p.suffix.lower() not in [".png", ".svg", ".pdf"]):
+				path = "%s.png" % path
+
+			print("Using save path '%s'" % path)
+			figure.savefig(path)
 
 			msg = QMessageBox()
 			msg.setIcon(QMessageBox.Information)
-			msg.setText("Graph saved to %s" % path[0])
+			msg.setText("Graph saved to %s" % path)
 			msg.setWindowTitle("Success")
 			msg.exec_()
 		else:
 			plt.show()
+
+		# Close the figure and window
+		ax.cla()
+		figure.clf()
+		plt.close("all")
 
 	def saveGraph(self):
 		print("saveGraph clicked!")
