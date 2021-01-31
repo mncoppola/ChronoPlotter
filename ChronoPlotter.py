@@ -91,10 +91,29 @@ class ChronoPlotter(QWidget):
 	def initUI(self):
 
 		# Left-hand panel of user-populated series data
-		self.label = QLabel("Select LabRadar or MagnetoSpeed directory to populate series data")
+		self.label = QLabel("Select LabRadar or MagnetoSpeed directory\nto populate series data\n")
+		self.label.setAlignment(Qt.AlignCenter)
+
+		self.dir_btn = QPushButton("Select directory", self)
+		self.dir_btn.clicked.connect(self.dirDialog)
+		self.dir_btn.setMinimumWidth(300)
+		self.dir_btn.setMaximumWidth(300)
+		self.dir_btn.setMinimumHeight(50)
+		self.dir_btn.setMaximumHeight(50)
+
+		self.placeholder_vbox = QVBoxLayout()
+		self.placeholder_vbox.addStretch(0)
+		self.placeholder_vbox.addWidget(self.label)
+		self.placeholder_vbox.setAlignment(self.label, Qt.AlignCenter)
+		self.placeholder_vbox.addWidget(self.dir_btn)
+		self.placeholder_vbox.setAlignment(self.dir_btn, Qt.AlignCenter)
+		self.placeholder_vbox.addStretch(0)
+
+		self.placeholder_vbox_widget = QWidget()
+		self.placeholder_vbox_widget.setLayout(self.placeholder_vbox)
 
 		self.stacked_widget = QStackedWidget()
-		self.stacked_widget.addWidget(self.label)
+		self.stacked_widget.addWidget(self.placeholder_vbox_widget)
 		self.stacked_widget.setCurrentIndex(0)
 
 		scroll_vbox = QVBoxLayout()
@@ -169,19 +188,20 @@ class ChronoPlotter(QWidget):
 		bottom_layout.addWidget(groupBox, stretch=2)
 		bottom_layout.addWidget(groupBox_options, stretch=1)
 
-		self.dir_btn = QPushButton("Select directory", self)
-		self.dir_btn.clicked.connect(self.dirDialog)
-		self.dir_btn.setMinimumWidth(200)
-		self.dir_btn.setMaximumWidth(200)
+		# Create a hidden file dialog button in the top-left. It'll be revealed once the left panel
+		# is filled with chrono series data.
+		self.dir_btn2 = QPushButton("Select directory", self)
+		self.dir_btn2.clicked.connect(self.dirDialog)
+		self.dir_btn2.setMinimumWidth(300)
+		self.dir_btn2.setMaximumWidth(300)
+		self.dir_btn2.hide()
 
 		# About link
 		self.about = QPushButton("About this app", self)
 		self.about.clicked.connect(self.showAbout)
-		#self.about = QLabel("About this app")
-		#self.about.linkActivated.connect(self.showAbout)
 
 		top_layout = QHBoxLayout()
-		top_layout.addWidget(self.dir_btn)
+		top_layout.addWidget(self.dir_btn2)
 		top_layout.addStretch()
 		top_layout.addWidget(self.about)
 
@@ -198,26 +218,9 @@ class ChronoPlotter(QWidget):
 		path = QFileDialog.getExistingDirectory(None, "Select directory")
 		print("Selected directory: %s" % path)
 
-		if self.scroll_area:
-			self.stacked_widget.removeWidget(self.scroll_area)
-
-		# Wrap grid in a widget to make the grid scrollable
-		scroll_area_widget = QWidget()
-
-		self.series_grid = QGridLayout(scroll_area_widget)
-		self.series_grid.setColumnStretch(0, 0)
-		self.series_grid.setColumnStretch(1, 1)
-		self.series_grid.setColumnStretch(2, 2)
-		self.series_grid.setColumnStretch(3, 3)
-		self.series_grid.setColumnStretch(4, 3)
-		self.series_grid.setHorizontalSpacing(25)
-
-		self.scroll_area = QScrollArea()
-		self.scroll_area.setWidget(scroll_area_widget)
-		self.scroll_area.setWidgetResizable(True)
-
-		self.stacked_widget.addWidget(self.scroll_area)
-		self.stacked_widget.setCurrentWidget(self.scroll_area)
+		if path == "":
+			print("User didn't select a directory, bail")
+			return
 
 		self.series = []
 
@@ -225,18 +228,34 @@ class ChronoPlotter(QWidget):
 		# LabRadar has a LBR/ directory in the root of its drive filled with SR####/ directories
 		# MagnetoSpeed has a single LOG.CSV file in the root of its drive
 
-		data_found = False
+		lr_data_found = False
+
+		# We have a couple extra checks for LabRadar data. We handle the cases where the user selected the root of the
+		# SD card (and the series directories are actually in LBR/), and if we're inside one of the actual series
+		# directories and we need to be one directory up to enumerate all of them.
 
 		lbr_path = os.path.join(path, "LBR")
 		if os.path.exists(lbr_path) and os.path.isdir(lbr_path):
 			path = lbr_path
-			data_found = True
+			lr_data_found = True
 			print("Detected LabRadar directory '%s'. Using that directory instead." % lbr_path)
 
 			msg = QMessageBox()
 			msg.setIcon(QMessageBox.Information)
-			msg.setText("Detected LabRadar directory, using '%s'" % lbr_path)
-			msg.setWindowTitle("Information")
+			msg.setText("Detected LabRadar data\n\nUsing '%s'" % path)
+			msg.setWindowTitle("Success")
+			msg.exec_()
+
+		trk_path = os.path.join(path, "TRK")
+		if os.path.exists(trk_path) and os.path.isdir(trk_path):
+			path = os.path.abspath(os.path.join(path, ".."))
+			lr_data_found = True
+			print("Detected LabRadar directory '%s'. Using one directory level up instead." % trk_path)
+
+			msg = QMessageBox()
+			msg.setIcon(QMessageBox.Information)
+			msg.setText("Detected LabRadar data\n\nUsing '%s'" % path)
+			msg.setWindowTitle("Success")
 			msg.exec_()
 
 		# Regex for LabRadar series directory
@@ -253,8 +272,8 @@ class ChronoPlotter(QWidget):
 
 				msg = QMessageBox()
 				msg.setIcon(QMessageBox.Information)
-				msg.setText("Detected MagnetoSpeed directory, using '%s'" % path)
-				msg.setWindowTitle("Information")
+				msg.setText("Detected MagnetoSpeed data\n\nUsing '%s'" % path)
+				msg.setWindowTitle("Success")
 				msg.exec_()
 
 				try:
@@ -280,16 +299,16 @@ class ChronoPlotter(QWidget):
 				f.close()
 
 			elif os.path.isdir(fpath) and pattern.match(fname):
-				print("Detected LabRadar directory, using '%s'" % path)
+				print("Detected LabRadar series directory '%s'" % fpath)
 
-				if not data_found:
+				if not lr_data_found:
 					msg = QMessageBox()
 					msg.setIcon(QMessageBox.Information)
-					msg.setText("Detected LabRadar directory, using '%s'" % path)
-					msg.setWindowTitle("Information")
+					msg.setText("Detected LabRadar data\n\nUsing '%s'" % path)
+					msg.setWindowTitle("Success")
 					msg.exec_()
 
-					data_found = True
+					lr_data_found = True
 
 				csv_path = os.path.join(fpath, "%s Report.csv" % fname)
 				try:
@@ -314,11 +333,44 @@ class ChronoPlotter(QWidget):
 				self.series.append((series_num, fname, csv_data, charge_weight, checkbox))
 				f.close()
 
-		# Sort the list
+		# Sort the list by series number
 		self.series = sorted(self.series, key=lambda x: x[0])
 
-		# Clear the placeholder text from the series data area
-		self.stacked_widget.setCurrentIndex(1)
+		# Only continue if chrono data was found
+		if len(self.series) == 0:
+			print("Didn't find any chrono data in this directory, bail")
+
+			msg = QMessageBox()
+			msg.setIcon(QMessageBox.Critical)
+			msg.setText("Unable to find chronograph data in '%s'" % path)
+			msg.setWindowTitle("Error")
+			msg.exec_()
+			return
+
+		# If we already have series data displayed, clear it out first
+		if self.scroll_area:
+			self.stacked_widget.removeWidget(self.scroll_area)
+
+		# Wrap grid in a widget to make the grid scrollable
+		scroll_area_widget = QWidget()
+
+		self.series_grid = QGridLayout(scroll_area_widget)
+		self.series_grid.setColumnStretch(0, 0)
+		self.series_grid.setColumnStretch(1, 1)
+		self.series_grid.setColumnStretch(2, 2)
+		self.series_grid.setColumnStretch(3, 3)
+		self.series_grid.setColumnStretch(4, 3)
+		self.series_grid.setHorizontalSpacing(25)
+
+		self.scroll_area = QScrollArea()
+		self.scroll_area.setWidget(scroll_area_widget)
+		self.scroll_area.setWidgetResizable(True)
+
+		self.stacked_widget.addWidget(self.scroll_area)
+		self.stacked_widget.setCurrentWidget(self.scroll_area)
+
+		# Now that we've hidden the placeholder text + button, reveal the file dialog button in the top-left
+		self.dir_btn2.show()
 
 		# Headers for series data
 		name_header = QLabel("Series Name")
@@ -359,6 +411,8 @@ class ChronoPlotter(QWidget):
 			datetime_label = QLabel("%s %s" % (csv_data["first_date"], csv_data["first_time"]))
 			self.series_grid.addWidget(datetime_label, i + 1, 4)
 
+		self.series_grid.setRowStretch(len(self.series) + 1, 1)
+
 		self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 		self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 		self.scroll_area.setWidgetResizable(True)
@@ -393,19 +447,33 @@ class ChronoPlotter(QWidget):
 	def showGraph(self, save_without_showing=False):
 		print("showGraph clicked!")
 
+		num_enabled = 0
+
 		for val in self.series:
 			series_num = val[0]
 			series_name = val[1]
 			csv_data = val[2]
 			charge = val[3].value()
 			checkbox = val[4]
-			if checkbox.isChecked() and charge == 0:
-				msg = QMessageBox()
-				msg.setIcon(QMessageBox.Critical)
-				msg.setText("Series %s is missing charge weight!" % series_name)
-				msg.setWindowTitle("Error")
-				msg.exec_()
-				return
+			if checkbox.isChecked():
+				num_enabled += 1
+				if charge == 0:
+					msg = QMessageBox()
+					msg.setIcon(QMessageBox.Critical)
+					msg.setText("'%s' is missing charge weight!" % series_name)
+					msg.setWindowTitle("Error")
+					msg.exec_()
+					return
+
+		if num_enabled < 2:
+			print("Only %d series enabled, bailing", num_enabled)
+
+			msg = QMessageBox()
+			msg.setIcon(QMessageBox.Critical)
+			msg.setText("At least two series are required to graph!")
+			msg.setWindowTitle("Error")
+			msg.exec_()
+			return
 
 		plt.style.use("seaborn-whitegrid")
 		matplotlib.rcParams['font.family'] = "DejaVu Sans"
@@ -416,7 +484,11 @@ class ChronoPlotter(QWidget):
 
 		last_average = None
 
-		for i, val in enumerate(self.series):
+		# Create a copy of the series data we'll actually use to draw the graph. We need to sort the data
+		# by chage weight so it draws correctly if the user-inputted charge weights aren't in order.
+		sorted_series = sorted(self.series.copy(), key=lambda x: x[3].value())
+
+		for i, val in enumerate(sorted_series):
 			series_num = val[0]
 			series_name = val[1]
 			csv_data = val[2]
@@ -464,7 +536,7 @@ class ChronoPlotter(QWidget):
 
 		last_average = None
 
-		for i, val in enumerate(self.series):
+		for i, val in enumerate(sorted_series):
 			series_num = val[0]
 			series_name = val[1]
 			csv_data = val[2]
