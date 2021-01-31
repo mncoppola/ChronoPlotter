@@ -12,6 +12,10 @@ from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QFileDialog, QGridLayout, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea, QFormLayout, QGroupBox, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QDoubleSpinBox, QStackedWidget, QMessageBox
 
+if sys.version_info < (3, 5):
+	print("Python 3.5+ is required!")
+	sys.exit(-1)
+
 # Extracts data for a single series from a LabRadar CSV file
 def extract_labradar_series_data(csvfile):
 	csv_data = {"m_velocs": []}
