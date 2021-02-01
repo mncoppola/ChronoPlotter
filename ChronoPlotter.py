@@ -11,7 +11,8 @@ import matplotlib.transforms as transforms
 from pathlib import Path
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QFileDialog, QGridLayout, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea, QFormLayout, QGroupBox, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QDoubleSpinBox, QStackedWidget, QMessageBox
+from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
+from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QFileDialog, QGridLayout, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea, QFormLayout, QGroupBox, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QDoubleSpinBox, QStackedWidget, QMessageBox, QDialog, QDialogButtonBox
 
 if sys.version_info < (3, 5):
 	print("Python 3.5+ is required!")
@@ -170,6 +171,8 @@ class ChronoPlotter(QWidget):
 		essd_layout = QHBoxLayout()
 		self.essd_checkbox = QCheckBox()
 		self.essd_checkbox.setChecked(True)
+		# QCheckBoxes are shorter than QLineEdit and QComboBoxes. Set it manually to match the other rows.
+		self.essd_checkbox.setFixedHeight(self.graph_title.sizeHint().height())
 		essd_layout.addWidget(self.essd_checkbox, 0)
 		essd_layout.addWidget(QLabel("Show ES + SD above shot strings"), 1)
 		self.options_layout.addLayout(essd_layout)
@@ -178,6 +181,7 @@ class ChronoPlotter(QWidget):
 		vd_layout = QHBoxLayout()
 		self.vd_checkbox = QCheckBox()
 		self.vd_checkbox.setChecked(True)
+		self.vd_checkbox.setFixedHeight(self.graph_title.sizeHint().height())
 		vd_layout.addWidget(self.vd_checkbox, 0)
 		vd_layout.addWidget(QLabel("Show velocity deltas below shot strings"), 1)
 		self.options_layout.addLayout(vd_layout)
@@ -189,6 +193,9 @@ class ChronoPlotter(QWidget):
 		self.save_graph_btn = QPushButton("Save graph as image", self)
 		self.save_graph_btn.clicked.connect(self.saveGraph)
 		self.options_layout.addWidget(self.save_graph_btn)
+
+		# Don't resize row heights if window height changes
+		self.options_layout.addStretch(0)
 
 		groupBox_options = QGroupBox("Graph options:")
 		groupBox_options.setLayout(self.options_layout)
@@ -220,7 +227,7 @@ class ChronoPlotter(QWidget):
 		layout_vert.addLayout(top_layout)
 		layout_vert.addLayout(bottom_layout)
 
-		self.setGeometry(300, 300, 1000, 500)
+		self.setGeometry(300, 300, 1000, layout_vert.sizeHint().height())
 		self.setWindowTitle("ChronoPlotter")
 		self.show()
 
@@ -705,9 +712,65 @@ class ChronoPlotter(QWidget):
 
 	def showAbout(self):
 		print("showAbout clicked!")
-		msg = QMessageBox()
-		msg.setText("""<center><h1>ChronoPlotter v0.0.1</h1>By Michael Coppola<br><a href="https://github.com/mncoppola/ChronoPlotter">github.com/mncoppola/ChronoPlotter</a><br><br>If you found this tool helpful, share some primers with a friend in need.<br><br>Or consider contributing to:<br><a href="https://www.doctorswithoutborders.org/">Doctors Without Borders</a><br><a href="https://www.navysealfoundation.org/">The Navy SEAL Foundation</a><br><a href="https://eji.org/">Equal Justice Initiative</a><br><a href="https://www.mskcc.org/">Memorial Sloan Kettering Cancer Center</a>""")
+
+		svg_str = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   viewBox="0 0 475 475"
+   height="475"
+   width="475"
+   xml:space="preserve"
+   version="1.1"
+   id="svg2"><metadata
+     id="metadata8"><rdf:RDF><cc:Work
+         rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title></dc:title></cc:Work></rdf:RDF></metadata><defs
+     id="defs6" /><g
+     transform="matrix(1.25,0,0,-1.25,0,475)"
+     id="g10"><g
+       transform="scale(0.1,0.1)"
+       id="g12"><path
+         id="path14"
+         style="fill:#100f0d;fill-opacity:1;fill-rule:nonzero;stroke:none"
+         d="m 1950.9,102.539 0,847.461 -40.71,0 0,122.82 c 17.52,4.53 30.53,20.33 30.53,39.27 0,18.95 -13.01,34.73 -30.53,39.27 l 0,124.27 c 17.52,4.53 30.53,20.32 30.53,39.27 0,18.95 -13.01,34.74 -30.53,39.27 l 0,124.28 c 17.52,4.53 30.53,20.31 30.53,39.27 0,18.94 -13.01,34.73 -30.53,39.27 l 0,124.26 c 17.52,4.53 30.53,20.33 30.53,39.27 0,18.94 -13.01,34.74 -30.53,39.27 l 0,130.03 130.02,0 c 4.54,-17.52 20.33,-30.54 39.27,-30.54 18.95,0 34.73,13.02 39.28,30.54 l 124.26,0 c 4.54,-17.52 20.33,-30.54 39.27,-30.54 18.95,0 34.73,13.02 39.28,30.54 l 124.26,0 c 4.54,-17.52 20.33,-30.54 39.27,-30.54 18.95,0 34.74,13.02 39.28,30.54 l 124.26,0 c 4.54,-17.52 20.33,-30.54 39.28,-30.54 18.94,0 34.72,13.02 39.27,30.54 l 122.82,0 0,-40.72 847.45,0 C 3670.97,896.43 2903.57,129.031 1950.9,102.539 Z M 102.535,1849.1 l 847.469,0 0,40.72 122.816,0 c 4.54,-17.52 20.33,-30.54 39.27,-30.54 18.95,0 34.74,13.02 39.28,30.54 l 124.26,0 c 4.54,-17.52 20.33,-30.54 39.28,-30.54 18.95,0 34.74,13.02 39.28,30.54 l 124.26,0 c 4.54,-17.52 20.32,-30.54 39.28,-30.54 18.93,0 34.73,13.02 39.27,30.54 l 124.26,0 c 4.54,-17.52 20.33,-30.54 39.27,-30.54 18.94,0 34.73,13.02 39.27,30.54 l 130.03,0 0,-130.03 c -17.53,-4.55 -30.54,-20.33 -30.54,-39.27 0,-18.94 13.01,-34.72 30.54,-39.27 l 0,-124.26 c -17.53,-4.55 -30.54,-20.33 -30.54,-39.27 0,-18.96 13.01,-34.74 30.54,-39.27 l 0,-124.28 c -17.53,-4.53 -30.54,-20.32 -30.54,-39.27 0,-18.95 13.01,-34.74 30.54,-39.27 l 0,-124.27 c -17.53,-4.54 -30.54,-20.32 -30.54,-39.27 0,-18.94 13.01,-34.73 30.54,-39.27 l 0,-122.82 -40.72,0 0,-847.461 C 896.438,129.02 129.02,896.43 102.535,1849.1 Z m 1746.575,1848.35 0,-847.45 40.72,0 0,-122.82 c -17.53,-4.55 -30.54,-20.33 -30.54,-39.28 0,-18.94 13.01,-34.73 30.54,-39.28 l 0,-124.25 c -17.53,-4.55 -30.54,-20.33 -30.54,-39.28 0,-18.94 13.01,-34.73 30.54,-39.27 l 0,-124.26 c -17.53,-4.55 -30.54,-20.33 -30.54,-39.28 0,-18.94 13.01,-34.73 30.54,-39.27 l 0,-124.26 c -17.53,-4.55 -30.54,-20.33 -30.54,-39.28 0,-18.94 13.01,-34.73 30.54,-39.27 l 0,-130.02 -130.03,0 c -4.54,17.52 -20.33,30.53 -39.27,30.53 -18.94,0 -34.73,-13.01 -39.27,-30.53 l -124.26,0 c -4.54,17.52 -20.34,30.53 -39.27,30.53 -18.96,0 -34.74,-13.01 -39.28,-30.53 l -124.26,0 c -4.54,17.52 -20.33,30.53 -39.28,30.53 -18.95,0 -34.74,-13.01 -39.28,-30.53 l -124.26,0 c -4.54,17.52 -20.33,30.53 -39.28,30.53 -18.94,0 -34.73,-13.01 -39.27,-30.53 l -122.816,0 0,40.71 -847.469,0 c 26.481,952.67 793.899,1720.08 1746.575,1746.56 z m 1848.35,-1746.56 -847.45,0 0,-40.71 -122.82,0 c -4.55,17.52 -20.33,30.53 -39.27,30.53 -18.95,0 -34.74,-13.01 -39.28,-30.53 l -124.26,0 c -4.54,17.52 -20.33,30.53 -39.28,30.53 -18.94,0 -34.73,-13.01 -39.27,-30.53 l -124.26,0 c -4.55,17.52 -20.33,30.53 -39.28,30.53 -18.94,0 -34.73,-13.01 -39.27,-30.53 l -124.26,0 c -4.55,17.52 -20.33,30.53 -39.28,30.53 -18.94,0 -34.73,-13.01 -39.27,-30.53 l -130.02,0 0,130.02 c 17.52,4.54 30.53,20.33 30.53,39.27 0,18.95 -13.01,34.73 -30.53,39.28 l 0,124.26 c 17.52,4.54 30.53,20.33 30.53,39.27 0,18.95 -13.01,34.73 -30.53,39.28 l 0,124.26 c 17.52,4.54 30.53,20.33 30.53,39.27 0,18.95 -13.01,34.73 -30.53,39.28 l 0,124.25 c 17.52,4.55 30.53,20.34 30.53,39.28 0,18.95 -13.01,34.73 -30.53,39.28 l 0,122.82 40.71,0 0,847.45 c 952.67,-26.49 1720.08,-793.9 1746.56,-1746.56 z M 1900.01,3800 C 850.664,3800 0,2949.34 0,1900 0,850.648 850.664,0 1900.01,0 2949.35,0 3800,850.648 3800,1900 c 0,1049.34 -850.65,1900 -1899.99,1900" /></g></g></svg>"""
+
+		about1 = QLabel()
+		about1.setTextFormat(Qt.RichText)
+		about1.setText("<center><h1>ChronoPlotter v0.0.1</h1>")
+
+		svg_bytes = bytearray(svg_str, encoding="utf-8")
+		svg = QSvgWidget()
+		svg.renderer().load(svg_bytes)
+		svg.setFixedSize(100, 100)
+
+		about2 = QLabel()
+		about2.setTextFormat(Qt.RichText)
+		about2.setText("""<center>By Michael Coppola<br><a href="https://github.com/mncoppola/ChronoPlotter">github.com/mncoppola/ChronoPlotter</a><br><br>If you found this tool helpful, share some primers with a friend in need.<br><br>Or consider contributing to:<br><a href="https://www.doctorswithoutborders.org/">Doctors Without Borders</a><br><a href="https://www.navysealfoundation.org/">The Navy SEAL Foundation</a><br><a href="https://eji.org/">Equal Justice Initiative</a><br><a href="https://www.mskcc.org/">Memorial Sloan Kettering Cancer Center</a>""")
+		about2.setOpenExternalLinks(True)
+
+		msg = QDialog()
+
+		button_box = QDialogButtonBox()
+		button_box.addButton("OK", QDialogButtonBox.AcceptRole)
+		button_box.accepted.connect(msg.accept)
+
+		about_vbox = QVBoxLayout()
+		about_vbox.addWidget(about1)
+		about_vbox.addSpacing(10)
+		about_vbox.addWidget(svg)
+		about_vbox.addSpacing(10)
+		about_vbox.addWidget(about2)
+		about_vbox.addSpacing(10)
+		about_vbox.addWidget(button_box)
+		about_vbox.setAlignment(svg, Qt.AlignHCenter)
+
+		msg.setLayout(about_vbox)
 		msg.setWindowTitle("About ChronoPlotter")
+		msg.setFixedSize(msg.minimumSizeHint())
 		msg.exec_()
 
 
