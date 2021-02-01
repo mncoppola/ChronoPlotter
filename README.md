@@ -10,13 +10,13 @@ Table of contents:
 
 If you're looking to quickly get started with ChronoPlotter, download and run the prebuilt program:
 
-* **Windows**: [ChronoPlotter.exe download](https://github.com/mncoppola/ChronoPlotter2/releases/latest/download/ChronoPlotter-Windows.exe)
+* **Windows**: [ChronoPlotter.exe download](https://github.com/mncoppola/ChronoPlotter/releases/latest/download/ChronoPlotter-Windows.exe)
 * **MacOS**: Coming soon
-* **Linux**: [ChronoPlotter download](https://github.com/mncoppola/ChronoPlotter2/releases/latest/download/ChronoPlotter-Linux) (Ubuntu 18.04+)
+* **Linux**: [ChronoPlotter download](https://github.com/mncoppola/ChronoPlotter/releases/latest/download/ChronoPlotter-Linux) (Ubuntu 18.04+)
 
-Nerds and power users should instead reference the [Running ChronoPlotter with Python](#running-chronoplotter-with-python) section.
+Nerds and power users should reference the [Running ChronoPlotter with Python](#running-chronoplotter-with-python) section.
 
-If using the prebuilt program, it may take a few moments to start. The program's main screen will then show:
+The prebuilt program may take a few moments to start. The program's main screen will then show:
 
 ![Home screen](https://github.com/mncoppola/ChronoPlotter2/blob/main/images/1.png?raw=true)
 
@@ -28,7 +28,7 @@ The program should now be populated with all of your recorded data:
 
 ![Populated series data](https://github.com/mncoppola/ChronoPlotter2/blob/main/images/3.png?raw=true)
 
-Now enter the charge weights for each series you want to include in the graph. Make sure to uncheck any series you don't want to include. To include details in the graph about the load being tested, fill out the text fields on the right:
+Enter the charge weights for each series you want to include in the graph. Make sure to uncheck any series you don't want to include. To include details in the graph about the load being tested, additionally fill in the text fields on the right:
 
 ![Full details filled out](https://github.com/mncoppola/ChronoPlotter2/blob/main/images/4.png?raw=true)
 
@@ -48,12 +48,17 @@ Close the preview window, making sure not to close ChronoPlotter itself. Finally
 
 ## Running ChronoPlotter with Python
 
-Users can also directly run `ChronoPlotter.py` as a Python script instead of using the prebuilt binaries. These binaries make portability and distribution easier, but are built with PyInstaller which is not the most efficient with file size or program startup time.
+Users can directly run `ChronoPlotter.py` as a Python script instead of using the prebuilt binaries. These binaries make portability and distribution easier, but are built with PyInstaller which is not the most efficient with file size or program startup time.
 
 Python 3.5+ is required (for PyQt5)
 
 Install the following dependencies:
-```pip3 install numpy matplotlib PyQt5```
+```
+pip3 install --upgrade install pip
+pip3 install numpy matplotlib PyQt5
+```
 
 Then run:
-```python3 ChronoPlotter.py```
+```
+python3 ChronoPlotter.py
+```
