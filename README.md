@@ -54,7 +54,7 @@ Python 3.5+ is required (for PyQt5)
 
 Install the following dependencies:
 ```
-pip3 install --upgrade install pip
+pip3 install --upgrade pip
 pip3 install numpy matplotlib PyQt5
 ```
 
