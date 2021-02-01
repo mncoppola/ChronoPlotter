@@ -684,7 +684,7 @@ class ChronoPlotter(QWidget):
 				path = "%s.png" % path
 
 			print("Using save path '%s'" % path)
-			figure.savefig(path)
+			figure.savefig(path, dpi=200)
 
 			msg = QMessageBox()
 			msg.setIcon(QMessageBox.Information)
