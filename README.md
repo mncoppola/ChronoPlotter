@@ -18,29 +18,29 @@ Nerds and power users should reference the [Running ChronoPlotter with Python](#
 
 The prebuilt program may take a few moments to start. The program's main screen will then show:
 
-![Home screen](https://github.com/mncoppola/ChronoPlotter2/blob/main/images/1.png?raw=true)
+![Home screen](https://github.com/mncoppola/ChronoPlotter/blob/main/images/1.png?raw=true)
 
 Make sure the SD card from your LabRadar or MagnetoSpeed is plugged into your computer. Then click `Select directory`, navigate to your SD card, and click `Select Folder` to confirm. The following example shows a LabRadar SD card:
 
-![Directory selection](https://github.com/mncoppola/ChronoPlotter2/blob/main/images/2.png?raw=true)
+![Directory selection](https://github.com/mncoppola/ChronoPlotter/blob/main/images/2.png?raw=true)
 
 The program should now be populated with all of your recorded data:
 
-![Populated series data](https://github.com/mncoppola/ChronoPlotter2/blob/main/images/3.png?raw=true)
+![Populated series data](https://github.com/mncoppola/ChronoPlotter/blob/main/images/3.png?raw=true)
 
 Enter the charge weights for each series you want to include in the graph. Make sure to uncheck any series you don't want to include. To include details in the graph about the load being tested, additionally fill in the text fields on the right:
 
-![Full details filled out](https://github.com/mncoppola/ChronoPlotter2/blob/main/images/4.png?raw=true)
+![Full details filled out](https://github.com/mncoppola/ChronoPlotter/blob/main/images/4.png?raw=true)
 
 Clicking `Show graph` pops open a new window with a preview of the generated graph. **Note: This does not save your graph, only displays it.**
 
 The graph will look something like this:
 
-![Scatter plot](https://github.com/mncoppola/ChronoPlotter2/blob/main/images/scatter.png?raw=true)
+![Scatter plot](https://github.com/mncoppola/ChronoPlotter/blob/main/images/scatter.png?raw=true)
 
 You can also create a line chart with standard deviation error bars by selecting it from the `Graph type` drop-down.
 
-![Line chart + SD](https://github.com/mncoppola/ChronoPlotter2/blob/main/images/line.png?raw=true)
+![Line chart + SD](https://github.com/mncoppola/ChronoPlotter/blob/main/images/line.png?raw=true)
 
 By default, ChronoPlotter includes ES (Extreme Spread), SD (standard deviation), and the series-to-series difference in velocity for each series in the graph. You can remove these from the graph by unchecking the `Show ES + SD above shot strings` and `Show velocity deltas below shot strings` options.
 
