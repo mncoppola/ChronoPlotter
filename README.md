@@ -28,7 +28,7 @@ The program should now be populated with all of your recorded data:
 
 ![Populated series data](https://github.com/mncoppola/ChronoPlotter/blob/main/images/3.png?raw=true)
 
-Enter the charge weights for each series you want to include in the graph. Make sure to uncheck any series you don't want to include. To include details in the graph about the load being tested, additionally fill in the text fields on the right:
+Enter the charge weights for each series you want to include in the graph. Make sure to uncheck any series you don't want to include. To include details in the graph about the components used in testing, additionally fill in the text fields on the right:
 
 ![Full details filled out](https://github.com/mncoppola/ChronoPlotter/blob/main/images/4.png?raw=true)
 
@@ -38,7 +38,7 @@ The graph will look something like this:
 
 ![Scatter plot](https://github.com/mncoppola/ChronoPlotter/blob/main/images/scatter.png?raw=true)
 
-You can also create a line chart with standard deviation error bars by selecting it from the `Graph type` drop-down.
+You can alternatively create a line chart with standard deviation error bars by selecting it from the `Graph type` drop-down.
 
 ![Line chart + SD](https://github.com/mncoppola/ChronoPlotter/blob/main/images/line.png?raw=true)
 
