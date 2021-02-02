@@ -26,10 +26,6 @@ def extract_labradar_series_data(csvfile):
 			csv_data["total_shots"] = int(row[1])
 		elif idx == 6:
 			csv_data["v_units"] = row[1]
-#		elif idx == 12:
-#			csv_data["v_lowest"] = int(float(row[1]))
-#		elif idx == 13:
-#			csv_data["v_highest"] = int(float(row[1]))
 		elif idx > 17:
 			if idx == 18:
 				csv_data["first_date"] = row[15]
@@ -60,9 +56,6 @@ def extract_magnetospeed_series_data(csvfile):
 			if row[0] == "Series" and row[2] == "Shots:":
 				cur["series_num"] = int(row[1])
 				cur["total_shots"] = int(row[3])
-#			elif row[0] == "Min":
-#				cur["v_lowest"] = int(row[1])
-#				cur["v_highest"] = int(row[3])
 			elif str(row[0]).isdigit():
 				print("Adding velocity %d" % int(row[2]))
 				cur["m_velocs"].append(int(row[2]))
