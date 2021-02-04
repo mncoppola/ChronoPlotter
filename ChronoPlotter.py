@@ -475,7 +475,7 @@ class ChronoPlotter(QWidget):
 					return
 
 		if num_enabled < 2:
-			print("Only %d series enabled, bailing", num_enabled)
+			print("Only %d series enabled, bailing" % num_enabled)
 
 			msg = QMessageBox()
 			msg.setIcon(QMessageBox.Critical)
