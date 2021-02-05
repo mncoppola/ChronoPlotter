@@ -1,10 +1,12 @@
 import argparse
 import csv
+import io
 import numpy
 import os
 import re
 import sys
 import matplotlib
+matplotlib.use("svg")
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
@@ -68,6 +70,24 @@ def extract_magnetospeed_series_data(csvfile):
 				cur = {"m_velocs": [], "first_date": "", "first_time": ""}
 
 	return csv_datas
+
+class GraphPreview(QWidget):
+
+	def __init__(self, image):
+		super().__init__()
+
+		image.seek(0)
+
+		self.svg = QSvgWidget(self)
+		self.svg.renderer().load(image.read())
+
+		self.setGeometry(300, 300, self.svg.sizeHint().width(), self.svg.sizeHint().height())
+		self.setWindowTitle("Graph Preview")
+		self.show()
+
+	def resizeEvent(self, event):
+		self.svg.setFixedSize(event.size())
+
 
 class ChronoPlotter(QWidget):
 
@@ -691,7 +711,11 @@ class ChronoPlotter(QWidget):
 			msg.setWindowTitle("Success")
 			msg.exec_()
 		else:
-			plt.show()
+			print("Showing graph preview")
+			buf = io.BytesIO()
+			figure.savefig(buf, dpi=200, format='svg')
+
+			self.preview = GraphPreview(buf)
 
 		# Close the figure and window
 		ax.cla()
