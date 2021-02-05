@@ -16,7 +16,7 @@ If you're looking to quickly get started with ChronoPlotter, download and run th
 
 Nerds and power users should reference the [Running ChronoPlotter with Python](#running-chronoplotter-with-python) section.
 
-The prebuilt program may take a few moments to start. The program's main screen will then show:
+**Note: The program may take a few moments to start.** The program's main screen will then show:
 
 ![Home screen](https://github.com/mncoppola/ChronoPlotter/blob/main/images/1.png?raw=true)
 
