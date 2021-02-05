@@ -1,9 +1,11 @@
 # Build pipeline for Ubuntu and Windows
 
 trigger:
-- main
+  tags:
+    include:
+    - v*
+    
 jobs:
-
 - job: 'Ubuntu'
   pool:
     vmImage: 'ubuntu-18.04'
@@ -22,12 +24,17 @@ jobs:
         python -m pip install PyInstaller
   - task: CmdLine@2
     inputs:
-      script: 'python -m PyInstaller ChronoPlotter.py --onefile'
-  - task: PublishPipelineArtifact@1
+      script: 'python -m PyInstaller ChronoPlotter.py --onefile -n ChronoPlotter-Linux'
+  - task: GitHubRelease@1
     inputs:
-      targetPath: '$(Pipeline.Workspace)/s/dist/ChronoPlotter'
-      artifact: 'build-ubuntu'
-      publishLocation: 'pipeline'
+      gitHubConnection: 'Github service connection'
+      repositoryName: 'mncoppola/ChronoPlotter'
+      action: 'edit'
+      target: '$(Build.SourceVersion)'
+      tag: '$(Build.SourceBranchName)'
+      assets: '$(Pipeline.Workspace)/s/dist/ChronoPlotter-Linux'
+      assetUploadMode: 'replace'
+      addChangeLog: false
 
 - job: 'Windows'
   pool:
@@ -47,9 +54,14 @@ jobs:
         python -m pip install PyInstaller
   - task: CmdLine@2
     inputs:
-      script: 'python -m PyInstaller ChronoPlotter.py --onefile -w'
-  - task: PublishPipelineArtifact@1
+      script: 'python -m PyInstaller ChronoPlotter.py --onefile -w --icon=images\icon.ico -n ChronoPlotter-Windows'
+  - task: GitHubRelease@1
     inputs:
-      targetPath: '$(Pipeline.Workspace)\s\dist\ChronoPlotter.exe'
-      artifact: 'build-win'
-      publishLocation: 'pipeline'
+      gitHubConnection: 'Github service connection'
+      repositoryName: 'mncoppola/ChronoPlotter'
+      action: 'edit'
+      target: '$(Build.SourceVersion)'
+      tag: '$(Build.SourceBranchName)'
+      assets: '$(Pipeline.Workspace)\s\dist\ChronoPlotter-Windows.exe'
+      assetUploadMode: 'replace'
+      addChangeLog: false
