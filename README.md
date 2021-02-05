@@ -5,6 +5,7 @@ Easily generate graphs using recorded data from your chronograph. Supports LabRa
 Table of contents:
 * [Quick Start](#quick-start)
 * [Running ChronoPlotter with Python](#running-chronoplotter-with-python)
+* [Notes About PyInstaller](#notes-about-pyinstaller)
 
 ## Quick Start
 
@@ -62,3 +63,13 @@ Then run:
 ```
 python3 ChronoPlotter.py
 ```
+
+## Notes About PyInstaller
+
+ChronoPlotter uses PyInstaller to generate single file executables for ease of distribution. It does not come without certain trade-offs, though. PyInstaller works by bundling an entire base Python installation + additional modules in a single file, and unpacking it to a temporary directory every time the executable is run. This results in large executables and slow program start time (up to 15 seconds on slow disks!)
+
+A lot of time has been spent trying to optimize the ChronoPlotter executables. PyInstaller was chosen for its multi-platform support, ability to create single file executables, and current support by project maintainers. It also features a "hooks" subsystem that optimizes out unused portions of common Python modules. Other Python "freezing" solutions such as py2exe and cx_Freeze, as well as Python compilers such as Nuitka, were also explored but either ran into errors or produced even larger files than PyInstaller.
+
+Focus was instead placed on optimizing the PyInstaller-created executables themselves. ChronoPlotter uses matplotlib and PyQt5 which are both notoriously massive, complex dependencies that are difficult to efficiently freeze. By default, PyInstaller bundles all matplotlib backend modules it can find, however modifying PyInstaller to include a hardcoded whitelist provided only marginal improvement. Configuring PyInstaller to pack files with UPX provided the greatest file size savings (almost 10mb smaller) but increased the executable start time by upwards of 20-40% which became unacceptable on slow disks.
+
+At the end of the day, ChronoPlotter ships standard PyInstaller single file executables. The correct solution is to rewrite the entire project in C++ and swap out matplotlib for a different native graphing solution. That's going to be a whole thing though, and there's something nice about the versatility and human-readability of Python. If you have any suggestions to improve ChronoPlotter or the way it's distributed, feel free to open an issue on the tracker.
