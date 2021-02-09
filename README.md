@@ -29,7 +29,7 @@ The program should now be populated with all of your recorded data:
 
 ![Populated series data](https://github.com/mncoppola/ChronoPlotter/blob/main/images/3.png?raw=true)
 
-Enter the charge weights for each series you want to include in the graph. Make sure to uncheck any series you don't want to include. To include details in the graph about the components used in testing, additionally fill in the text fields on the right:
+Enter the charge weights for each series you want to include in the graph. Make sure to uncheck any series you don't want to include. To include details in the graph about the components being tested, additionally fill in the text fields on the right:
 
 ![Full details filled out](https://github.com/mncoppola/ChronoPlotter/blob/main/images/4.png?raw=true)
 
@@ -49,9 +49,7 @@ Close the preview window, making sure not to close ChronoPlotter itself. Finally
 
 ## Running ChronoPlotter with Python
 
-Users can directly run `ChronoPlotter.py` as a Python script instead of using the prebuilt binaries. These binaries make portability and distribution easier, but are built with PyInstaller which is not the most efficient with file size or program startup time.
-
-Python 3.5+ is required (for PyQt5)
+Users can directly run `ChronoPlotter.py` as a Python script instead of using the prebuilt binaries. Python 3.5+ is required (for PyQt5)
 
 Install the following dependencies:
 ```
