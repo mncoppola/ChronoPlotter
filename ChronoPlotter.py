@@ -585,11 +585,6 @@ class ChronoPlotter(QWidget):
 			es = highest - lowest
 			stdev = numpy.std(m_velocs, ddof=1)
 
-			points = []
-
-			for v in m_velocs:
-				points.append((charge, v))
-
 			# Obtain display coordinates for points. We need to convert points for both highest/lowest shots and stdev
 			b_l_scatter_pix = ax.transData.transform_point((i, lowest))
 			t_r_scatter_pix = ax.transData.transform_point((i, highest))
