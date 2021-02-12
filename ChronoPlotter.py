@@ -319,7 +319,7 @@ class ChronoPlotter(QWidget):
 					checkbox.setChecked(True)
 
 					charge_weight = QDoubleSpinBox()
-					charge_weight.setDecimals(1)
+					charge_weight.setDecimals(2)
 					charge_weight.setSingleStep(0.1)
 					charge_weight.setMinimumWidth(100)
 					charge_weight.setMaximumWidth(100)
@@ -354,7 +354,7 @@ class ChronoPlotter(QWidget):
 				checkbox.setChecked(True)
 
 				charge_weight = QDoubleSpinBox()
-				charge_weight.setDecimals(1)
+				charge_weight.setDecimals(2)
 				charge_weight.setSingleStep(0.1)
 				charge_weight.setMinimumWidth(100)
 				charge_weight.setMaximumWidth(100)
