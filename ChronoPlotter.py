@@ -517,6 +517,8 @@ class ChronoPlotter(QWidget):
 		# by chage weight so it draws correctly if the user-inputted charge weights aren't in order.
 		sorted_series = sorted(self.series.copy(), key=lambda x: x[3].value())
 
+		enabled_i = 0
+
 		for i, val in enumerate(sorted_series):
 			series_num = val[0]
 			series_name = val[1]
@@ -544,26 +546,29 @@ class ChronoPlotter(QWidget):
 			print("SD: %.1f" % stdev)
 			print("")
 
-			averages.append((i, average))
+			averages.append((enabled_i, average))
 			xticks.append(charge)
 
 			if self.graph_type.currentIndex() == self.SCATTER:
 				points = []
 
 				for v in m_velocs:
-					points.append((i, v))
+					points.append((enabled_i, v))
 
 				# Draw scatter plot
 				scatter_x, scatter_y = list(zip(*points))
 				plt.plot(scatter_x, scatter_y, "o", color="#0536b0", markeredgewidth=0, markersize=6)
 
 			else:
-				plt.errorbar(i, average, fmt="o", yerr=stdev, markersize=5, capsize=3, elinewidth=1, ecolor="black", markerfacecolor="#0536b0", markeredgecolor="#0536b0")
+				plt.errorbar(enabled_i, average, fmt="o", yerr=stdev, markersize=5, capsize=3, elinewidth=1, ecolor="black", markerfacecolor="#0536b0", markeredgecolor="#0536b0")
+
+			enabled_i += 1
 
 		# Now that we've plotted all the points, we can draw the bounding boxes around each string of shots (if we're doing a scatter plot)
 		# We couldn't do it above since each loop iteration adds another string of shots which alters the pixel positions of the previous ones
 
 		last_average = None
+		enabled_i = 0
 
 		for i, val in enumerate(sorted_series):
 			series_num = val[0]
@@ -586,11 +591,11 @@ class ChronoPlotter(QWidget):
 			stdev = numpy.std(m_velocs, ddof=1)
 
 			# Obtain display coordinates for points. We need to convert points for both highest/lowest shots and stdev
-			b_l_scatter_pix = ax.transData.transform_point((i, lowest))
-			t_r_scatter_pix = ax.transData.transform_point((i, highest))
+			b_l_scatter_pix = ax.transData.transform_point((enabled_i, lowest))
+			t_r_scatter_pix = ax.transData.transform_point((enabled_i, highest))
 
-			b_l_stdev_pix = ax.transData.transform_point((i, average - stdev))
-			t_r_stdev_pix = ax.transData.transform_point((i, average + stdev))
+			b_l_stdev_pix = ax.transData.transform_point((enabled_i, average - stdev))
+			t_r_stdev_pix = ax.transData.transform_point((enabled_i, average + stdev))
 
 			print("bottom left pix: ", b_l_scatter_pix)
 			print("top right pix: ", t_r_scatter_pix)
@@ -617,7 +622,7 @@ class ChronoPlotter(QWidget):
 
 			if self.essd_checkbox.isChecked():
 				print("Placing ES+SD annotation")
-				plt.annotate("ES: %d\nSD: %.1f" % (es, stdev), xy=(i, top_label), ha="center", va="baseline", bbox=dict(boxstyle="square", facecolor="white", linewidth=0))
+				plt.annotate("ES: %d\nSD: %.1f" % (es, stdev), xy=(enabled_i, top_label), ha="center", va="baseline", bbox=dict(boxstyle="square", facecolor="white", linewidth=0))
 
 			if self.vd_checkbox.isChecked():
 				if last_average != None:
@@ -637,9 +642,10 @@ class ChronoPlotter(QWidget):
 						alpha = 1.0
 
 					print("Placing velocity delta annotation for delta %d" % delta)
-					plt.annotate("%s%d" % (sign, abs_delta), xy=(i, bottom_label), ha="center", va="top", bbox=dict(boxstyle="square", facecolor=facecolor, alpha=alpha, linewidth=0))
+					plt.annotate("%s%d" % (sign, abs_delta), xy=(enabled_i, bottom_label), ha="center", va="top", bbox=dict(boxstyle="square", facecolor=facecolor, alpha=alpha, linewidth=0))
 
 				last_average = average
+				enabled_i += 1
 
 		# Draw average line
 		line_x, line_y = list(zip(*averages))
