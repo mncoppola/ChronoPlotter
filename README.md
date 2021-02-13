@@ -29,9 +29,13 @@ The program should now be populated with all of your recorded data:
 
 ![Populated series data](https://github.com/mncoppola/ChronoPlotter/blob/main/images/3.png?raw=true)
 
-Enter the charge weights for each series you want to include in the graph. Make sure to uncheck any series you don't want to include. To include details in the graph about the components being tested, additionally fill in the text fields on the right:
+Uncheck any series you don't want to include in the graph. Then enter a charge weight for each series, or click the `Auto-fill charge weights` button to automate the process:
 
-![Full details filled out](https://github.com/mncoppola/ChronoPlotter/blob/main/images/4.png?raw=true)
+![Auto-fill charge weights](https://github.com/mncoppola/ChronoPlotter/blob/main/images/4.png?raw=true)
+
+To include details in the graph about the components used in testing, additionally fill in the text fields on the right:
+
+![Full details filled out](https://github.com/mncoppola/ChronoPlotter/blob/main/images/5.png?raw=true)
 
 Clicking `Show graph` pops open a new window with a preview of the generated graph. **Note: This does not save your graph, only displays it.**
 
@@ -43,7 +47,7 @@ You can alternatively create a line chart with standard deviation error bars by 
 
 ![Line chart + SD](https://github.com/mncoppola/ChronoPlotter/blob/main/images/line.png?raw=true)
 
-By default, ChronoPlotter includes ES (Extreme Spread), SD (standard deviation), and the series-to-series difference in velocity for each series in the graph. You can remove these from the graph by unchecking the `Show ES + SD above shot strings` and `Show velocity deltas below shot strings` options.
+By default, ChronoPlotter includes ES (Extreme Spread), SD (standard deviation), and the series-to-series difference in velocity for each series in the graph. The average (mean) velocity for each series can also be included but is unchecked by default. You can add, remove, or change the location of these details in the graph under the `Graph options` section.
 
 Close the preview window, making sure not to close ChronoPlotter itself. Finally, click `Save graph as image` to save your graph as a .PNG, .SVG, or .PDF file.
 
