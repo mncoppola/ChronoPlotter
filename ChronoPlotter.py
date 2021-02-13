@@ -15,6 +15,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QFileDialog, QGridLayout, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea, QFormLayout, QGroupBox, QComboBox, QLineEdit, QDoubleSpinBox, QStackedWidget, QMessageBox, QDialog, QDialogButtonBox, QFrame, QRadioButton, QSizePolicy
 
+VERSION = "v0.0.3"
+
 if sys.version_info < (3, 5):
 	print("Python 3.5+ is required!")
 	sys.exit(-1)
@@ -988,7 +990,7 @@ class ChronoPlotter(QWidget):
 
 		about1 = QLabel()
 		about1.setTextFormat(Qt.RichText)
-		about1.setText("<center><h1>ChronoPlotter v0.0.1</h1>")
+		about1.setText("<center><h1>ChronoPlotter %s</h1>" % VERSION)
 
 		svg_bytes = bytearray(svg_str, encoding="utf-8")
 		svg = QSvgWidget()
