@@ -13,7 +13,7 @@ import matplotlib.transforms as transforms
 from pathlib import Path
 from PyQt5.QtCore import Qt
 from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QFileDialog, QGridLayout, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea, QFormLayout, QGroupBox, QComboBox, QLineEdit, QDoubleSpinBox, QStackedWidget, QMessageBox, QDialog, QDialogButtonBox
+from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QFileDialog, QGridLayout, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea, QFormLayout, QGroupBox, QComboBox, QLineEdit, QDoubleSpinBox, QStackedWidget, QMessageBox, QDialog, QDialogButtonBox, QFrame, QRadioButton, QSizePolicy
 
 if sys.version_info < (3, 5):
 	print("Python 3.5+ is required!")
@@ -71,6 +71,12 @@ def extract_magnetospeed_series_data(csvfile):
 
 	return csv_datas
 
+class QHLine(QFrame):
+	def __init__(self):
+		super(QHLine, self).__init__()
+		self.setFrameShape(QFrame.HLine)
+		self.setFrameShadow(QFrame.Sunken)
+
 class GraphPreview(QWidget):
 
 	def __init__(self, image):
@@ -87,6 +93,72 @@ class GraphPreview(QWidget):
 
 	def resizeEvent(self, event):
 		self.svg.setFixedSize(event.size())
+
+class AutofillDialog(QDialog):
+	def __init__(self, main):
+		super().__init__()
+
+		self.setWindowTitle("Auto-fill charge weights")
+
+		self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+		self.buttonBox.accepted.connect(self.accept)
+		self.buttonBox.rejected.connect(self.reject)
+
+		if main.weight_units.currentIndex() == main.GRAIN:
+			weight_units = "gr"
+		else:
+			weight_units = "g"
+
+		form_layout = QFormLayout()
+
+		self.starting_charge = QDoubleSpinBox()
+		self.starting_charge.setDecimals(2)
+		self.starting_charge.setSingleStep(0.1)
+		self.starting_charge.setMinimumWidth(100)
+		self.starting_charge.setMaximumWidth(100)
+
+		self.starting_charge_hbox = QHBoxLayout()
+		self.starting_charge_hbox.addWidget(self.starting_charge)
+		self.starting_charge_hbox.addWidget(QLabel(weight_units))
+
+		form_layout.addRow(QLabel("Starting value:"), self.starting_charge_hbox)
+
+		self.interval = QDoubleSpinBox()
+		self.interval.setDecimals(2)
+		self.interval.setSingleStep(0.1)
+		self.interval.setMinimumWidth(100)
+		self.interval.setMaximumWidth(100)
+
+		self.interval_hbox = QHBoxLayout()
+		self.interval_hbox.addWidget(self.interval)
+		self.interval_hbox.addWidget(QLabel(weight_units))
+
+		form_layout.addRow(QLabel("Interval:"), self.interval_hbox)
+
+		self.direction = QComboBox()
+		self.direction.addItem("Values increasing")
+		self.direction.addItem("Values decreasing")
+		self.direction.resize(self.direction.sizeHint())
+		self.direction.setFixedWidth(self.direction.sizeHint().width())
+		form_layout.addRow(QLabel("Direction:"), self.direction)
+
+		self.layout = QVBoxLayout()
+		self.label = QLabel("Automatically fill in charge weights for all enabled series, starting from the top of the list.\n")
+		self.label.setWordWrap(True)
+		self.layout.addWidget(self.label)
+		self.layout.addLayout(form_layout)
+		self.layout.addWidget(self.direction)
+		self.layout.addWidget(self.buttonBox)
+		self.setLayout(self.layout)
+
+		self.setFixedSize(self.sizeHint())
+
+	@staticmethod
+	def getValues(main):
+		dialog = AutofillDialog(main)
+		result = dialog.exec_()
+
+		return (result, dialog.starting_charge.value(), dialog.interval.value(), dialog.direction.currentIndex())
 
 
 class ChronoPlotter(QWidget):
@@ -106,8 +178,18 @@ class ChronoPlotter(QWidget):
 		self.FPS = 0
 		self.MPS = 1
 
+		# annotation location
+		self.ABOVE_STRING = 0
+		self.BELOW_STRING = 1
+
+		# auto-fill direction
+		self.INCREASING = 0
+		self.DECREASING = 1
+
 		self.series = []
 		self.scroll_area = None
+
+		self.dir_autofill_shown = False
 
 		self.initUI()
 
@@ -139,28 +221,34 @@ class ChronoPlotter(QWidget):
 		self.stacked_widget.addWidget(self.placeholder_vbox_widget)
 		self.stacked_widget.setCurrentIndex(0)
 
-		scroll_vbox = QVBoxLayout()
-		scroll_vbox.addWidget(self.stacked_widget)
+		# Create hidden file dialog and auto-fill buttons under the scroll area. They'll be
+		# revealed once the left panel is filled with chrono series data.
+		self.dir_btn2 = QPushButton("Select directory")
+		self.dir_btn2.clicked.connect(self.dirDialog)
+		self.dir_btn2.setMinimumWidth(250)
+		self.dir_btn2.setMaximumWidth(250)
+
+		self.autofill_btn = QPushButton("Auto-fill charge weights")
+		self.autofill_btn.clicked.connect(self.autofillDialog)
+		self.autofill_btn.setMinimumWidth(250)
+		self.autofill_btn.setMaximumWidth(250)
+
+		self.dir_autofill_layout = QHBoxLayout()
+		self.dir_autofill_layout.addWidget(self.dir_btn2)
+		self.dir_autofill_layout.addWidget(self.autofill_btn)
+
+		self.scroll_vbox = QVBoxLayout()
+		self.scroll_vbox.addWidget(self.stacked_widget)
 		groupBox = QGroupBox("Chronograph data to include:")
-		groupBox.setLayout(scroll_vbox)
+		groupBox.setLayout(self.scroll_vbox)
+
+		self.left_layout = QVBoxLayout()
+		self.left_layout.addWidget(groupBox)
 
 		# Right-hand panel of graph options
 		self.options_layout = QVBoxLayout()
 
-		# Form class
 		form_layout = QFormLayout()
-		self.graph_title = QLineEdit()
-		form_layout.addRow(QLabel("Graph title:"), self.graph_title)
-		self.rifle = QLineEdit()
-		form_layout.addRow(QLabel("Rifle:"), self.rifle)
-		self.projectile = QLineEdit()
-		form_layout.addRow(QLabel("Projectile:"), self.projectile)
-		self.propellant = QLineEdit()
-		form_layout.addRow(QLabel("Propellant:"), self.propellant)
-		self.brass = QLineEdit()
-		form_layout.addRow(QLabel("Brass:"), self.brass)
-		self.primer = QLineEdit()
-		form_layout.addRow(QLabel("Primer:"), self.primer)
 
 		self.graph_type = QComboBox()
 		self.graph_type.addItem("Scatter plot")
@@ -179,58 +267,116 @@ class ChronoPlotter(QWidget):
 
 		self.options_layout.addLayout(form_layout)
 
-		# Show ES+SD text checkbox
-		essd_layout = QHBoxLayout()
-		self.essd_checkbox = QCheckBox()
-		self.essd_checkbox.setChecked(True)
-		# QCheckBoxes are shorter than QLineEdit and QComboBoxes. Set it manually to match the other rows.
-		self.essd_checkbox.setFixedHeight(self.graph_title.sizeHint().height())
-		essd_layout.addWidget(self.essd_checkbox, 0)
-		essd_layout.addWidget(QLabel("Show ES + SD above shot strings"), 1)
-		self.options_layout.addLayout(essd_layout)
+		self.options_layout.addWidget(QHLine())
 
-		# Show velocity data checkbox
+		es_layout = QHBoxLayout()
+		self.es_checkbox = QCheckBox()
+		self.es_checkbox.setChecked(True)
+		self.es_checkbox.stateChanged.connect(self.esCheckBoxChanged)
+		es_layout.addWidget(self.es_checkbox, 0)
+		self.es_label = QLabel("Show ES")
+		es_layout.addWidget(self.es_label, 1)
+		self.es_location = QComboBox()
+		self.es_location.addItem("above shot strings")
+		self.es_location.addItem("below shot strings")
+		es_layout.addWidget(self.es_location)
+		self.options_layout.addLayout(es_layout)
+
+		sd_layout = QHBoxLayout()
+		self.sd_checkbox = QCheckBox()
+		self.sd_checkbox.setChecked(True)
+		self.sd_checkbox.stateChanged.connect(self.sdCheckBoxChanged)
+		sd_layout.addWidget(self.sd_checkbox, 0)
+		self.sd_label = QLabel("Show SD")
+		sd_layout.addWidget(self.sd_label, 1)
+		self.sd_location = QComboBox()
+		self.sd_location.addItem("above shot strings")
+		self.sd_location.addItem("below shot strings")
+		sd_layout.addWidget(self.sd_location)
+		self.options_layout.addLayout(sd_layout)
+
+		avg_layout = QHBoxLayout()
+		self.avg_checkbox = QCheckBox()
+		self.avg_checkbox.setChecked(False)
+		self.avg_checkbox.stateChanged.connect(self.avgCheckBoxChanged)
+		avg_layout.addWidget(self.avg_checkbox, 0)
+		self.avg_label = QLabel("Show avg. veloc.")
+		self.avg_label.setStyleSheet("color: #878787")
+		avg_layout.addWidget(self.avg_label, 1)
+		self.avg_location = QComboBox()
+		self.avg_location.addItem("above shot strings")
+		self.avg_location.addItem("below shot strings")
+		self.avg_location.setEnabled(False)
+		avg_layout.addWidget(self.avg_location)
+		self.options_layout.addLayout(avg_layout)
+
 		vd_layout = QHBoxLayout()
 		self.vd_checkbox = QCheckBox()
 		self.vd_checkbox.setChecked(True)
-		self.vd_checkbox.setFixedHeight(self.graph_title.sizeHint().height())
+		self.vd_checkbox.stateChanged.connect(self.vdCheckBoxChanged)
 		vd_layout.addWidget(self.vd_checkbox, 0)
-		vd_layout.addWidget(QLabel("Show velocity deltas below shot strings"), 1)
+		self.vd_label = QLabel("Show veloc. deltas")
+		vd_layout.addWidget(self.vd_label, 1)
+		self.vd_location = QComboBox()
+		self.vd_location.addItem("above shot strings")
+		self.vd_location.addItem("below shot strings")
+		self.vd_location.setCurrentIndex(1)
+		vd_layout.addWidget(self.vd_location)
 		self.options_layout.addLayout(vd_layout)
-
-		self.create_graph_btn = QPushButton("Show graph", self)
-		self.create_graph_btn.clicked.connect(self.showGraph)
-		self.options_layout.addWidget(self.create_graph_btn)
-
-		self.save_graph_btn = QPushButton("Save graph as image", self)
-		self.save_graph_btn.clicked.connect(self.saveGraph)
-		self.options_layout.addWidget(self.save_graph_btn)
 
 		# Don't resize row heights if window height changes
 		self.options_layout.addStretch(0)
 
+		self.show_layout = QVBoxLayout()
+
+		self.create_graph_btn = QPushButton("Show graph", self)
+		self.create_graph_btn.clicked.connect(self.showGraph)
+		self.show_layout.addWidget(self.create_graph_btn)
+
+		self.save_graph_btn = QPushButton("Save graph as image", self)
+		self.save_graph_btn.clicked.connect(self.saveGraph)
+		self.show_layout.addWidget(self.save_graph_btn)
+
+		self.show_layout.addStretch(0)
+
+		form_layout2 = QFormLayout()
+		self.graph_title = QLineEdit()
+		form_layout2.addRow(QLabel("Graph title:"), self.graph_title)
+		self.rifle = QLineEdit()
+		form_layout2.addRow(QLabel("Rifle:"), self.rifle)
+		self.projectile = QLineEdit()
+		form_layout2.addRow(QLabel("Projectile:"), self.projectile)
+		self.propellant = QLineEdit()
+		form_layout2.addRow(QLabel("Propellant:"), self.propellant)
+		self.brass = QLineEdit()
+		form_layout2.addRow(QLabel("Brass:"), self.brass)
+		self.primer = QLineEdit()
+		form_layout2.addRow(QLabel("Primer:"), self.primer)
+
+		self.details_layout = QVBoxLayout()
+		self.details_layout.addLayout(form_layout2)
+
+		groupBox_details = QGroupBox("Graph details:")
+		groupBox_details.setLayout(self.details_layout)
+
 		groupBox_options = QGroupBox("Graph options:")
 		groupBox_options.setLayout(self.options_layout)
 
+		right_layout = QVBoxLayout()
+		right_layout.addWidget(groupBox_details)
+		right_layout.addWidget(groupBox_options)
+		right_layout.addLayout(self.show_layout)
+
 		# Layout to horizontally position series data and options
 		bottom_layout = QHBoxLayout()
-		bottom_layout.addWidget(groupBox, stretch=2)
-		bottom_layout.addWidget(groupBox_options, stretch=1)
-
-		# Create a hidden file dialog button in the top-left. It'll be revealed once the left panel
-		# is filled with chrono series data.
-		self.dir_btn2 = QPushButton("Select directory", self)
-		self.dir_btn2.clicked.connect(self.dirDialog)
-		self.dir_btn2.setMinimumWidth(300)
-		self.dir_btn2.setMaximumWidth(300)
-		self.dir_btn2.hide()
+		bottom_layout.addLayout(self.left_layout, stretch=2)
+		bottom_layout.addLayout(right_layout, stretch=0)
 
 		# About link
 		self.about = QPushButton("About this app", self)
 		self.about.clicked.connect(self.showAbout)
 
 		top_layout = QHBoxLayout()
-		top_layout.addWidget(self.dir_btn2)
 		top_layout.addStretch()
 		top_layout.addWidget(self.about)
 
@@ -239,9 +385,32 @@ class ChronoPlotter(QWidget):
 		layout_vert.addLayout(top_layout)
 		layout_vert.addLayout(bottom_layout)
 
-		self.setGeometry(300, 300, 1000, layout_vert.sizeHint().height())
+		self.setGeometry(300, 300, 1100, layout_vert.sizeHint().height())
 		self.setWindowTitle("ChronoPlotter")
 		self.show()
+
+	def autofillDialog(self):
+		print("autofillDialog called")
+		result, starting_charge, interval, direction = AutofillDialog.getValues(self)
+		if result == QDialog.Accepted:
+			print("User OK'd dialog")
+
+			cur_charge = starting_charge
+
+			for i, v in enumerate(self.series):
+				series_name = v[1]
+				csv_data = v[2]
+				charge_weight = v[3]
+				checkbox = v[4]
+				if checkbox.isChecked():
+					print("Setting series %s to %f" % (series_name, cur_charge))
+					charge_weight.setValue(cur_charge)
+					if direction == self.INCREASING:
+						cur_charge += interval
+					else:
+						cur_charge -= interval
+		else:
+			print("User cancelled dialog")
 
 	def dirDialog(self):
 		path = QFileDialog.getExistingDirectory(None, "Select directory")
@@ -398,8 +567,10 @@ class ChronoPlotter(QWidget):
 		self.stacked_widget.addWidget(self.scroll_area)
 		self.stacked_widget.setCurrentWidget(self.scroll_area)
 
-		# Now that we've hidden the placeholder text + button, reveal the file dialog button in the top-left
-		self.dir_btn2.show()
+		# Now that we've hidden the placeholder text + button, reveal the buttons under the scroll area
+		if self.dir_autofill_shown == False:
+			self.scroll_vbox.addLayout(self.dir_autofill_layout)
+			self.dir_autofill_shown = True
 
 		# Headers for series data
 		name_header = QLabel("Series Name")
@@ -472,6 +643,33 @@ class ChronoPlotter(QWidget):
 
 		print("Grid row %d was %s" % (idx, action))
 
+	def esCheckBoxChanged(self):
+		print("esCheckBoxChanged called")
+		return self.optionCheckBoxChanged(self.es_checkbox, self.es_label, self.es_location)
+
+	def sdCheckBoxChanged(self):
+		print("sdCheckBoxChanged called")
+		return self.optionCheckBoxChanged(self.sd_checkbox, self.sd_label, self.sd_location)
+
+	def avgCheckBoxChanged(self):
+		print("avgCheckBoxChanged called")
+		return self.optionCheckBoxChanged(self.avg_checkbox, self.avg_label, self.avg_location)
+
+	def vdCheckBoxChanged(self):
+		print("vdCheckBoxChanged called")
+		return self.optionCheckBoxChanged(self.vd_checkbox, self.vd_label, self.vd_location)
+
+	def optionCheckBoxChanged(self, checkbox, label, location):
+		if checkbox.isChecked():
+			action = "checked"
+			label.setStyleSheet("")
+			location.setEnabled(True)
+		else:
+			action = "unchecked"
+			label.setStyleSheet("color: #878787")
+			location.setEnabled(False)
+
+		print("checkbox was %s" % action)
 
 	def showGraph(self, save_without_showing=False):
 		print("showGraph clicked!")
@@ -620,9 +818,29 @@ class ChronoPlotter(QWidget):
 				top_label = top_stdev_label
 				bottom_label = bottom_stdev_label
 
-			if self.essd_checkbox.isChecked():
-				print("Placing ES+SD annotation")
-				plt.annotate("ES: %d\nSD: %.1f" % (es, stdev), xy=(enabled_i, top_label), ha="center", va="baseline", bbox=dict(boxstyle="square", facecolor="white", linewidth=0))
+			above_annotations = []
+			below_annotations = []
+
+			if self.es_checkbox.isChecked():
+				annotation = "ES: %d" % es
+				if self.es_location.currentIndex() == self.ABOVE_STRING:
+					above_annotations.append(annotation)
+				else:
+					below_annotations.append(annotation)
+
+			if self.sd_checkbox.isChecked():
+				annotation = "SD: %.1f" % stdev
+				if self.sd_location.currentIndex() == self.ABOVE_STRING:
+					above_annotations.append(annotation)
+				else:
+					below_annotations.append(annotation)
+
+			if self.avg_checkbox.isChecked():
+				annotation = r'$\bar{x}$: %.1f' % average
+				if self.avg_location.currentIndex() == self.ABOVE_STRING:
+					above_annotations.append(annotation)
+				else:
+					below_annotations.append(annotation)
 
 			if self.vd_checkbox.isChecked():
 				if last_average != None:
@@ -634,18 +852,31 @@ class ChronoPlotter(QWidget):
 
 					abs_delta = abs(delta)
 
+					# Early versions highlighted the velocity delta in darker shades of green as it became smaller
+					# The configurability of annotation locations then complicated this, so the highlighting code is left here but disabled for now
 					if abs_delta < 25:
 						facecolor = "#00e810"
 						alpha = (1 - (abs_delta / 25.0)) * 0.6
 					else:
 						facecolor = "white"
 						alpha = 1.0
+					annotation = "%s%d" % (sign, abs_delta)
+					if self.vd_location.currentIndex() == self.ABOVE_STRING:
+						above_annotations.append(annotation)
+					else:
+						below_annotations.append(annotation)
 
-					print("Placing velocity delta annotation for delta %d" % delta)
-					plt.annotate("%s%d" % (sign, abs_delta), xy=(enabled_i, bottom_label), ha="center", va="top", bbox=dict(boxstyle="square", facecolor=facecolor, alpha=alpha, linewidth=0))
+			if above_annotations:
+				print("Placing annotations above string")
+				plt.annotate("\n".join(above_annotations), xy=(enabled_i, top_label), ha="center", va="baseline", bbox=dict(boxstyle="square", facecolor="white", linewidth=0))
 
-				last_average = average
-				enabled_i += 1
+			if below_annotations:
+				print("Placing annotations below string")
+				#plt.annotate("%s%d" % (sign, abs_delta), xy=(enabled_i, bottom_label), ha="center", va="top", bbox=dict(boxstyle="square", facecolor=facecolor, alpha=alpha, linewidth=0))
+				plt.annotate("\n".join(below_annotations), xy=(enabled_i, bottom_label), ha="center", va="top", bbox=dict(boxstyle="square", facecolor="white", linewidth=0))
+
+			last_average = average
+			enabled_i += 1
 
 		# Draw average line
 		line_x, line_y = list(zip(*averages))
