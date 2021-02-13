@@ -241,7 +241,7 @@ class ChronoPlotter(QWidget):
 
 		self.scroll_vbox = QVBoxLayout()
 		self.scroll_vbox.addWidget(self.stacked_widget)
-		groupBox = QGroupBox("Chronograph data to include:")
+		groupBox = QGroupBox("Chronograph data:")
 		groupBox.setLayout(self.scroll_vbox)
 
 		self.left_layout = QVBoxLayout()
