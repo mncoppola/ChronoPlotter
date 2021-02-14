@@ -15,7 +15,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QFileDialog, QGridLayout, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea, QFormLayout, QGroupBox, QComboBox, QLineEdit, QDoubleSpinBox, QStackedWidget, QMessageBox, QDialog, QDialogButtonBox, QFrame, QRadioButton, QSizePolicy
 
-VERSION = "v0.0.3"
+VERSION = "v1.0.0"
 
 if sys.version_info < (3, 5):
 	print("Python 3.5+ is required!")
