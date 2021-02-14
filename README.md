@@ -11,9 +11,9 @@ Table of contents:
 
 If you're looking to quickly get started with ChronoPlotter, download and run the prebuilt program:
 
-* **Windows**: [ChronoPlotter.exe download](https://github.com/mncoppola/ChronoPlotter/releases/latest/download/ChronoPlotter-Windows.exe)
+* **Windows**: [ChronoPlotter.exe download](https://github.com/mncoppola/ChronoPlotter/releases/latest/download/ChronoPlotter.exe)
 * **MacOS**: Coming soon
-* **Linux**: [ChronoPlotter download](https://github.com/mncoppola/ChronoPlotter/releases/latest/download/ChronoPlotter-Linux) (Ubuntu 18.04+)
+* **Linux**: [ChronoPlotter download](https://github.com/mncoppola/ChronoPlotter/releases/latest/download/ChronoPlotter) (Ubuntu 18.04+)
 
 Nerds and power users should reference the [Running ChronoPlotter with Python](#running-chronoplotter-with-python) section.
 
