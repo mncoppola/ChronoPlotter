@@ -202,6 +202,10 @@ class ChronoPlotter(QWidget):
 		self.INCREASING = 0
 		self.DECREASING = 1
 
+		# line style
+		self.SOLID_LINE = 0
+		self.DASHED_LINE = 1
+
 		self.series = []
 		self.scroll_area = None
 
@@ -339,6 +343,23 @@ class ChronoPlotter(QWidget):
 		self.vd_location.setCurrentIndex(1)
 		vd_layout.addWidget(self.vd_location)
 		self.options_layout.addLayout(vd_layout)
+
+		trend_layout = QHBoxLayout()
+		self.trend_checkbox = QCheckBox()
+		self.trend_checkbox.setChecked(False)
+		self.trend_checkbox.stateChanged.connect(self.trendCheckBoxChanged)
+		trend_layout.addWidget(self.trend_checkbox, 0)
+		self.trend_label = QLabel("Show trend line")
+		self.trend_label.setStyleSheet("color: #878787")
+		trend_layout.addWidget(self.trend_label, 1)
+		self.trend_linetype = QComboBox()
+		self.trend_linetype.addItem("solid line")
+		self.trend_linetype.addItem("dashed line")
+		self.trend_linetype.setCurrentIndex(1)
+		self.trend_linetype.setEnabled(False)
+		trend_layout.addWidget(self.trend_linetype)
+		self.options_layout.addLayout(trend_layout)
+
 
 		# Don't resize row heights if window height changes
 		self.options_layout.addStretch(0)
@@ -687,15 +708,19 @@ class ChronoPlotter(QWidget):
 		print("vdCheckBoxChanged called")
 		return self.optionCheckBoxChanged(self.vd_checkbox, self.vd_label, self.vd_location)
 
-	def optionCheckBoxChanged(self, checkbox, label, location):
+	def trendCheckBoxChanged(self):
+		print("trendCheckBoxChanged called")
+		return self.optionCheckBoxChanged(self.trend_checkbox, self.trend_label, self.trend_linetype)
+
+	def optionCheckBoxChanged(self, checkbox, label, combo):
 		if checkbox.isChecked():
 			action = "checked"
 			label.setStyleSheet("")
-			location.setEnabled(True)
+			combo.setEnabled(True)
 		else:
 			action = "unchecked"
 			label.setStyleSheet("color: #878787")
-			location.setEnabled(False)
+			combo.setEnabled(False)
 
 		print("checkbox was %s" % action)
 
@@ -743,6 +768,8 @@ class ChronoPlotter(QWidget):
 		# by chage weight so it draws correctly if the user-inputted charge weights aren't in order.
 		sorted_series = sorted(self.series.copy(), key=lambda x: x[3].value())
 
+		all_points = []
+
 		enabled_i = 0
 
 		for i, val in enumerate(sorted_series):
@@ -780,6 +807,7 @@ class ChronoPlotter(QWidget):
 
 				for v in m_velocs:
 					points.append((enabled_i, v))
+					all_points.append((enabled_i, v))
 
 				# Draw scatter plot
 				scatter_x, scatter_y = list(zip(*points))
@@ -914,6 +942,17 @@ class ChronoPlotter(QWidget):
 		else:
 			plt.plot(line_x, line_y, "-", linewidth=1.5, color="#1c57eb")
 			ax.xaxis.grid(False)
+
+		# Draw trend line
+		if self.trend_checkbox.isChecked():
+			points_x, points_y = list(zip(*all_points))
+			z = numpy.polyfit(points_x, points_y, 1)
+			p = numpy.poly1d(z)
+			if self.trend_linetype.currentIndex() == self.SOLID_LINE:
+				line_type = "-"
+			else:
+				line_type = "--"
+			plt.plot(points_x, p(points_x), "r%s" % line_type, alpha=0.65)
 
 		# Titles and axis labels
 		graph_title = self.graph_title.text()
