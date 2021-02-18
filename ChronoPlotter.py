@@ -466,7 +466,7 @@ class ChronoPlotter(QWidget):
 
 			fpath = os.path.join(path, fname)
 
-			if fname == "LOG.CSV":
+			if fname.lower() == "log.csv":
 				csv_path = fpath
 				print("Detected MagnetoSpeed file '%s'" % csv_path)
 
