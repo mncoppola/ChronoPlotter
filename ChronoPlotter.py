@@ -1,5 +1,6 @@
 import argparse
 import csv
+import glob
 import io
 import numpy
 import os
@@ -26,7 +27,9 @@ def extract_labradar_series_data(csvfile):
 	csv_data = {"m_velocs": []}
 
 	for idx, row in enumerate(csvfile):
-		if idx == 4:
+		if idx == 3:
+			csv_data["series_num"] = int(row[1])
+		elif idx == 4:
 			csv_data["total_shots"] = int(row[1])
 		elif idx == 6:
 			csv_data["v_units"] = row[1]
@@ -36,6 +39,17 @@ def extract_labradar_series_data(csvfile):
 				csv_data["first_time"] = row[16]
 			csv_data["m_velocs"].append(int(row[1]))
 
+	# Ensure we have a valid LabRadar series
+	names = ["series_num", "total_shots", "v_units", "first_date", "first_time"]
+	if not all(name in csv_data for name in names):
+		print("csv_data does not have all expected keys, returning invalid", csv_data)
+		return None
+
+	if len(csv_data["m_velocs"]) == 0:
+		print("Series has no velocities. Likely deleted series, returning invalid")
+		return None
+
+	# We have a valid series
 	csv_data["v_lowest"] = min(csv_data["m_velocs"])
 	csv_data["v_highest"] = max(csv_data["m_velocs"])
 
@@ -459,7 +473,7 @@ class ChronoPlotter(QWidget):
 			msg.exec_()
 
 		# Regex for LabRadar series directory
-		pattern = re.compile("^SR\d\d\d\d")
+		pattern = re.compile("^SR\d\d\d\d.*")
 
 		for fname in os.listdir(path):
 			#print(fname)
@@ -510,16 +524,28 @@ class ChronoPlotter(QWidget):
 
 					lr_data_found = True
 
-				csv_path = os.path.join(fpath, "%s Report.csv" % fname)
+				csv_files = glob.glob(os.path.join(fpath, "* Report.csv"))
+
+				if len(csv_files) == 0:
+					print("No series CSV file found, skipping")
+					continue
+
+				# Just grab the first one
+				csv_path = csv_files[0]
+
 				try:
 					f = open(csv_path)
 				except:
 					print("%s does not exist" % csv_path)
 					continue
 
-				series_num = int(fname[2:])
 				csvfile = csv.reader((x.replace('\0', '') for x in f), delimiter=';')
 				csv_data = extract_labradar_series_data(csvfile)
+				if csv_data == None:
+					print("Invalid series, skipping")
+					continue
+
+				series_num = csv_data["series_num"]
 
 				checkbox = QCheckBox()
 				checkbox.setChecked(True)
@@ -616,7 +642,7 @@ class ChronoPlotter(QWidget):
 		self.series_grid.setRowStretch(len(self.series) + 1, 1)
 
 		self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-		self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 		self.scroll_area.setWidgetResizable(True)
 
 	# Lambdas in loops are hard
