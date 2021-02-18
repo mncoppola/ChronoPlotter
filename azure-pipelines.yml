@@ -25,6 +25,11 @@ jobs:
   - task: CmdLine@2
     inputs:
       script: 'python -m PyInstaller ChronoPlotter.py --onefile -n ChronoPlotter'
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Pipeline.Workspace)/s/dist/ChronoPlotter'
+      artifact: 'build-ubuntu'
+      publishLocation: 'pipeline'
   - task: GitHubRelease@1
     inputs:
       gitHubConnection: 'Github service connection'
@@ -55,6 +60,11 @@ jobs:
   - task: CmdLine@2
     inputs:
       script: 'python -m PyInstaller ChronoPlotter.py --onefile -w --icon=images\icon.ico -n ChronoPlotter'
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Pipeline.Workspace)\s\dist\ChronoPlotter.exe'
+      artifact: 'build-win'
+      publishLocation: 'pipeline'
   - task: GitHubRelease@1
     inputs:
       gitHubConnection: 'Github service connection'
