@@ -176,6 +176,6 @@ jobs:
       action: 'edit'
       target: '$(Build.SourceVersion)'
       tag: '$(Build.SourceBranchName)'
-      assets: '$(Pipeline.Workspace)\s\dist\ChronoPlotter.dmg'
+      assets: '$(Pipeline.Workspace)/s/dist/ChronoPlotter.dmg'
       assetUploadMode: 'replace'
       addChangeLog: false
