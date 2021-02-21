@@ -120,11 +120,12 @@ jobs:
     inputs:
       script: |
         create-dmg ChronoPlotter.app --identity="$(developer_id)"
+        mv "ChronoPlotter $(Build.SourceBranchName).dmg" "ChronoPlotter.dmg"
       workingDirectory: '$(Pipeline.Workspace)/s/dist/'
   - task: CmdLine@2
     inputs:
       script: |
-        RESULT=$(xcrun altool --notarize-app --primary-bundle-id ChronoPlotter -u "$(dev_username)" -p "$(dev_password)" --file "ChronoPlotter $(Build.SourceBranchName).dmg" --output-format xml)
+        RESULT=$(xcrun altool --notarize-app --primary-bundle-id ChronoPlotter -u "$(dev_username)" -p "$(dev_password)" --file "ChronoPlotter.dmg" --output-format xml)
 
         if [ $? -ne 0 ]; then
           echo "Submitting for notarization failed 1"
