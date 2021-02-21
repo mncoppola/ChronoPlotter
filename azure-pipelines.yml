@@ -15,13 +15,33 @@ jobs:
     inputs:
       versionSpec: '3.5'
       addToPath: true
+  - task: DownloadGitHubRelease@0
+    inputs:
+      connection: 'Github service connection'
+      userRepository: 'pyinstaller/pyinstaller'
+      defaultVersionType: 'specificTag'
+      version: 'v4.2'
+      itemPattern: '*.tar.gz'
+      downloadPath: '$(Pipeline.Workspace)'
+  - task: ExtractFiles@1
+    inputs:
+      archiveFilePatterns: '$(Pipeline.Workspace)\*.tar.gz'
+      destinationFolder: '$(Pipeline.Workspace)\pyinstaller'
+      cleanDestinationFolder: true
+      overwriteExistingFiles: false
   - task: CmdLine@2
     inputs:
       script: |
+        chdir
         python -m pip install --upgrade pip
+        python -m pip install --upgrade setuptools
         python -m pip install matplotlib
         python -m pip install PyQt5
-        python -m pip install PyInstaller
+        cd pyinstaller\pyinstaller-4.2\bootloader
+        python waf distclean all
+        cd ..
+        python setup.py install
+      workingDirectory: '$(Pipeline.Workspace)'
   - task: CmdLine@2
     inputs:
       script: 'python -m PyInstaller ChronoPlotter.py --onefile -w --icon=images\icon.ico -n ChronoPlotter'
