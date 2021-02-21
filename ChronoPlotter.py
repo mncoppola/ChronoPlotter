@@ -26,34 +26,39 @@ if sys.version_info < (3, 5):
 def extract_labradar_series_data(csvfile):
 	csv_data = {"m_velocs": []}
 
-	for idx, row in enumerate(csvfile):
-		if idx == 3:
-			csv_data["series_num"] = int(row[1])
-		elif idx == 4:
-			csv_data["total_shots"] = int(row[1])
-		elif idx == 6:
-			csv_data["v_units"] = row[1]
-		elif idx > 17:
-			if idx == 18:
-				csv_data["first_date"] = row[15]
-				csv_data["first_time"] = row[16]
-			csv_data["m_velocs"].append(int(row[1]))
+	try:
+		for idx, row in enumerate(csvfile):
+			if idx == 3:
+				csv_data["series_num"] = int(row[1])
+			elif idx == 4:
+				csv_data["total_shots"] = int(row[1])
+			elif idx == 6:
+				csv_data["v_units"] = row[1]
+			elif idx > 17:
+				if idx == 18:
+					csv_data["first_date"] = row[15]
+					csv_data["first_time"] = row[16]
+				csv_data["m_velocs"].append(int(row[1]))
 
-	# Ensure we have a valid LabRadar series
-	names = ["series_num", "total_shots", "v_units", "first_date", "first_time"]
-	if not all(name in csv_data for name in names):
-		print("csv_data does not have all expected keys, returning invalid", csv_data)
+		# Ensure we have a valid LabRadar series
+		names = ["series_num", "total_shots", "v_units", "first_date", "first_time"]
+		if not all(name in csv_data for name in names):
+			print("csv_data does not have all expected keys, returning invalid", csv_data)
+			return None
+
+		if len(csv_data["m_velocs"]) == 0:
+			print("Series has no velocities. Likely deleted series, returning invalid")
+			return None
+
+		# We have a valid series CSV
+		csv_data["v_lowest"] = min(csv_data["m_velocs"])
+		csv_data["v_highest"] = max(csv_data["m_velocs"])
+
+		return csv_data
+
+	except Exception as e:
+		print("File is not a well-formed LabRadar file, skipping")
 		return None
-
-	if len(csv_data["m_velocs"]) == 0:
-		print("Series has no velocities. Likely deleted series, returning invalid")
-		return None
-
-	# We have a valid series
-	csv_data["v_lowest"] = min(csv_data["m_velocs"])
-	csv_data["v_highest"] = max(csv_data["m_velocs"])
-
-	return csv_data
 
 # Maybe make these two funcs return a list of series datas, then abstract out the series tuple creation
 
@@ -65,27 +70,46 @@ def extract_magnetospeed_series_data(csvfile):
 
 	cur = {"m_velocs": [], "first_date": "", "first_time": ""}
 
-	for idx, row in enumerate(csvfile):
-		# They just love their whitespace
-		for i in range(len(row)):
-			row[i] = row[i].strip()
+	try:
+		for idx, row in enumerate(csvfile):
+			# Trim whitespace from cells
+			for i in range(len(row)):
+				row[i] = row[i].strip()
 
-		if len(row) > 0:
-			if row[0] == "Series" and row[2] == "Shots:":
-				cur["series_num"] = int(row[1])
-				cur["total_shots"] = int(row[3])
-			elif str(row[0]).isdigit():
-				print("Adding velocity %d" % int(row[2]))
-				cur["m_velocs"].append(int(row[2]))
-				if len(cur["m_velocs"]) == 1:
-					cur["v_units"] = row[3]
-			elif row[0] == "----":
-				cur["v_lowest"] = min(cur["m_velocs"])
-				cur["v_highest"] = max(cur["m_velocs"])
-				csv_datas.append(cur)
-				cur = {"m_velocs": [], "first_date": "", "first_time": ""}
+			if len(row) > 0:
+				if row[0] == "Series" and row[2] == "Shots:":
+					cur["series_num"] = int(row[1])
+					cur["total_shots"] = int(row[3])
+				elif str(row[0]).isdigit():
+					print("Adding velocity %d" % int(row[2]))
+					cur["m_velocs"].append(int(row[2]))
+					if len(cur["m_velocs"]) == 1:
+						cur["v_units"] = row[3]
+				elif row[0] == "----":
+					cur["v_lowest"] = min(cur["m_velocs"])
+					cur["v_highest"] = max(cur["m_velocs"])
 
-	return csv_datas
+					# Ensure we have a valid MagnetoSpeed series
+					use_series = True
+					names = ["series_num", "total_shots", "v_units"]
+					if not all(name in cur for name in names):
+						print("cur does not have all expected keys, skipping series", cur)
+						use_series = False
+
+					if len(cur["m_velocs"]) == 0:
+						print("Series has no velocities. Likely deleted or empty, skipping series")
+						use_series = False
+
+					if use_series:
+						csv_datas.append(cur)
+
+					cur = {"m_velocs": [], "first_date": "", "first_time": ""}
+
+		return csv_datas
+
+	except Exception as e:
+		print("File is not a well-formed MagnetoSpeed file, skipping")
+		return None
 
 class QHLine(QFrame):
 	def __init__(self):
