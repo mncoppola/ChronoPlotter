@@ -13,7 +13,6 @@ If you're looking to quickly get started with ChronoPlotter, download and run th
 
 * **Windows**: [ChronoPlotter.exe download](https://github.com/mncoppola/ChronoPlotter/releases/latest/download/ChronoPlotter.exe)
 * **MacOS**: [ChronoPlotter.dmg download](https://github.com/mncoppola/ChronoPlotter/releases/latest/download/ChronoPlotter.dmg)
-* **Linux**: [ChronoPlotter download](https://github.com/mncoppola/ChronoPlotter/releases/latest/download/ChronoPlotter) (Ubuntu 18.04+)
 
 Nerds and power users should reference the [Running ChronoPlotter with Python](#running-chronoplotter-with-python) section.
 
