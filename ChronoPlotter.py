@@ -14,7 +14,7 @@ import matplotlib.transforms as transforms
 from pathlib import Path
 from PyQt5.QtCore import Qt
 from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QFileDialog, QGridLayout, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea, QFormLayout, QGroupBox, QComboBox, QLineEdit, QDoubleSpinBox, QStackedWidget, QMessageBox, QDialog, QDialogButtonBox, QFrame, QRadioButton, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QFileDialog, QGridLayout, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea, QFormLayout, QGroupBox, QComboBox, QLineEdit, QDoubleSpinBox, QStackedWidget, QMessageBox, QDialog, QDialogButtonBox, QFrame, QRadioButton, QSizePolicy, QInputDialog
 
 VERSION = "v1.1.0"
 
@@ -134,6 +134,56 @@ class GraphPreview(QWidget):
 	def resizeEvent(self, event):
 		self.svg.setFixedSize(event.size())
 
+class RoundRobinDialog(QDialog):
+	def __init__(self, main):
+		super().__init__()
+
+		self.setWindowTitle("Convert from round-robin")
+
+		self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+		self.buttonBox.accepted.connect(self.accept)
+		self.buttonBox.rejected.connect(self.reject)
+
+		self.label = QLabel()
+		self.label.setTextFormat(Qt.RichText)
+		self.label.setText("<p>This feature handles chronograph data recorded using the \"round-robin\" method popular with <a href=\"http://www.ocwreloading.com/\">OCW testing</a>.<p>For example a shooter might record three chronograph series, where each series contains 10 shots with 10 different charge weights. Use this feature to \"convert\" the data back into 10 series of three-shot strings.<p>Note: This will <i>not</i> alter your CSV files, this only converts the data loaded in ChronoPlotter. It's assumed that charge weights are shot in the same order in each series.<br>")
+		self.label.setOpenExternalLinks(True)
+		self.label.setWordWrap(True)
+
+		self.layout = QVBoxLayout()
+		self.layout.addWidget(self.label)
+		self.layout.addWidget(QHLine())
+
+		series_velocs = [x[2]["m_velocs"] for x in main.series if x[4].isChecked()]
+		print("num enabled series: %d" % len(series_velocs))
+		print("series_velocs:", series_velocs)
+
+		num_velocs = [len(x) for x in series_velocs]
+		equal_lens = all(x == num_velocs[0] for x in num_velocs)
+		print("equal lens:", equal_lens)
+
+		self.detected = QLabel()
+
+		if equal_lens:
+			self.detected.setText("<center><br>Detected <b>%d</b> enabled series of <b>%d</b> shots each.<p>Click <b>OK</b> to convert this data into <b>%d</b> series of <b>%d</b> shots each.<br>" % (len(series_velocs), num_velocs[0], num_velocs[0], len(series_velocs)))
+
+			self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+			self.buttonBox.accepted.connect(self.accept)
+			self.buttonBox.rejected.connect(self.reject)
+		else:
+			self.detected.setText("<center><br>Detected <b>%d</b> enabled series of <b>different</b> lengths.<p>Series with the same number of shots are required to convert.<br>" % len(series_velocs))
+
+			self.buttonBox = QDialogButtonBox(QDialogButtonBox.Close)
+			self.buttonBox.rejected.connect(self.reject)
+
+		self.detected.setTextFormat(Qt.RichText)
+		self.detected.setWordWrap(True)
+		self.layout.addWidget(self.detected)
+		self.layout.addWidget(self.buttonBox)
+		self.setLayout(self.layout)
+
+		self.setFixedSize(self.sizeHint())
+
 class AutofillDialog(QDialog):
 	def __init__(self, main):
 		super().__init__()
@@ -230,6 +280,10 @@ class ChronoPlotter(QWidget):
 		self.SOLID_LINE = 0
 		self.DASHED_LINE = 1
 
+		# series type
+		self.LABRADAR = 0
+		self.MAGNETOSPEED = 1
+
 		self.series = []
 		self.scroll_area = None
 
@@ -269,16 +323,22 @@ class ChronoPlotter(QWidget):
 		# revealed once the left panel is filled with chrono series data.
 		self.dir_btn2 = QPushButton("Select directory")
 		self.dir_btn2.clicked.connect(self.dirDialog)
-		self.dir_btn2.setMinimumWidth(250)
-		self.dir_btn2.setMaximumWidth(250)
+		self.dir_btn2.setMinimumWidth(225)
+		self.dir_btn2.setMaximumWidth(225)
+
+		self.rr_btn = QPushButton("Convert from round-robin")
+		self.rr_btn.clicked.connect(self.roundrobinDialog)
+		self.rr_btn.setMinimumWidth(225)
+		self.rr_btn.setMaximumWidth(225)
 
 		self.autofill_btn = QPushButton("Auto-fill charge weights")
 		self.autofill_btn.clicked.connect(self.autofillDialog)
-		self.autofill_btn.setMinimumWidth(250)
-		self.autofill_btn.setMaximumWidth(250)
+		self.autofill_btn.setMinimumWidth(225)
+		self.autofill_btn.setMaximumWidth(225)
 
 		self.dir_autofill_layout = QHBoxLayout()
 		self.dir_autofill_layout.addWidget(self.dir_btn2)
+		self.dir_autofill_layout.addWidget(self.rr_btn)
 		self.dir_autofill_layout.addWidget(self.autofill_btn)
 
 		self.scroll_vbox = QVBoxLayout()
@@ -384,7 +444,6 @@ class ChronoPlotter(QWidget):
 		trend_layout.addWidget(self.trend_linetype)
 		self.options_layout.addLayout(trend_layout)
 
-
 		# Don't resize row heights if window height changes
 		self.options_layout.addStretch(0)
 
@@ -450,173 +509,9 @@ class ChronoPlotter(QWidget):
 		self.setWindowTitle("ChronoPlotter")
 		self.show()
 
-	def autofillDialog(self):
-		print("autofillDialog called")
-		result, starting_charge, interval, direction = AutofillDialog.getValues(self)
-		if result == QDialog.Accepted:
-			print("User OK'd dialog")
-
-			cur_charge = starting_charge
-
-			for i, v in enumerate(self.series):
-				series_name = v[1]
-				csv_data = v[2]
-				charge_weight = v[3]
-				checkbox = v[4]
-				if checkbox.isChecked():
-					print("Setting series %s to %f" % (series_name, cur_charge))
-					charge_weight.setValue(cur_charge)
-					if direction == self.INCREASING:
-						cur_charge += interval
-					else:
-						cur_charge -= interval
-		else:
-			print("User cancelled dialog")
-
-	def dirDialog(self):
-		path = QFileDialog.getExistingDirectory(None, "Select directory")
-		print("Selected directory: %s" % path)
-
-		if path == "":
-			print("User didn't select a directory, bail")
-			return
-
-		self.series = []
-
-		# We don't know if we're looking at a LabRadar or MagnetoSpeed yet
-		# LabRadar has a LBR/ directory in the root of its drive filled with SR####/ directories
-		# MagnetoSpeed has a single LOG.CSV file in the root of its drive
-
-		lr_data_found = False
-
-		# We have a couple extra checks for LabRadar data. We handle the cases where the user selected the root of the
-		# SD card (and the series directories are actually in LBR/), and if we're inside one of the actual series
-		# directories and we need to be one directory up to enumerate all of them.
-
-		lbr_path = os.path.join(path, "LBR")
-		if os.path.exists(lbr_path) and os.path.isdir(lbr_path):
-			path = lbr_path
-			lr_data_found = True
-			print("Detected LabRadar directory '%s'. Using that directory instead." % lbr_path)
-
-			msg = QMessageBox()
-			msg.setIcon(QMessageBox.Information)
-			msg.setText("Detected LabRadar data\n\nUsing '%s'" % path)
-			msg.setWindowTitle("Success")
-			msg.exec_()
-
-		trk_path = os.path.join(path, "TRK")
-		if os.path.exists(trk_path) and os.path.isdir(trk_path):
-			path = os.path.abspath(os.path.join(path, ".."))
-			lr_data_found = True
-			print("Detected LabRadar directory '%s'. Using one directory level up instead." % trk_path)
-
-			msg = QMessageBox()
-			msg.setIcon(QMessageBox.Information)
-			msg.setText("Detected LabRadar data\n\nUsing '%s'" % path)
-			msg.setWindowTitle("Success")
-			msg.exec_()
-
-		# Regex for LabRadar series directory
-		pattern = re.compile("^SR\d\d\d\d.*")
-
-		for fname in os.listdir(path):
-			#print(fname)
-
-			fpath = os.path.join(path, fname)
-
-			if fname.lower() == "log.csv":
-				csv_path = fpath
-				print("Detected MagnetoSpeed file '%s'" % csv_path)
-
-				msg = QMessageBox()
-				msg.setIcon(QMessageBox.Information)
-				msg.setText("Detected MagnetoSpeed data\n\nUsing '%s'" % path)
-				msg.setWindowTitle("Success")
-				msg.exec_()
-
-				try:
-					f = open(csv_path)
-				except:
-					print("%s does not exist" % csv_path)
-					continue
-
-				csvfile = csv.reader(f, delimiter=',')
-				csv_datas = extract_magnetospeed_series_data(csvfile)
-
-				for csv_data in csv_datas:
-					checkbox = QCheckBox()
-					checkbox.setChecked(True)
-
-					charge_weight = QDoubleSpinBox()
-					charge_weight.setDecimals(2)
-					charge_weight.setSingleStep(0.1)
-					charge_weight.setMinimumWidth(100)
-					charge_weight.setMaximumWidth(100)
-
-					self.series.append((csv_data["series_num"], "Series %d" % csv_data["series_num"], csv_data, charge_weight, checkbox))
-				f.close()
-
-			elif os.path.isdir(fpath) and pattern.match(fname):
-				print("Detected LabRadar series directory '%s'" % fpath)
-
-				if not lr_data_found:
-					msg = QMessageBox()
-					msg.setIcon(QMessageBox.Information)
-					msg.setText("Detected LabRadar data\n\nUsing '%s'" % path)
-					msg.setWindowTitle("Success")
-					msg.exec_()
-
-					lr_data_found = True
-
-				csv_files = glob.glob(os.path.join(fpath, "* Report.csv"))
-
-				if len(csv_files) == 0:
-					print("No series CSV file found, skipping")
-					continue
-
-				# Just grab the first one
-				csv_path = csv_files[0]
-
-				try:
-					f = open(csv_path)
-				except:
-					print("%s does not exist" % csv_path)
-					continue
-
-				csvfile = csv.reader((x.replace('\0', '') for x in f), delimiter=';')
-				csv_data = extract_labradar_series_data(csvfile)
-				if csv_data == None:
-					print("Invalid series, skipping")
-					continue
-
-				series_num = csv_data["series_num"]
-
-				checkbox = QCheckBox()
-				checkbox.setChecked(True)
-
-				charge_weight = QDoubleSpinBox()
-				charge_weight.setDecimals(2)
-				charge_weight.setSingleStep(0.1)
-				charge_weight.setMinimumWidth(100)
-				charge_weight.setMaximumWidth(100)
-
-				self.series.append((series_num, fname, csv_data, charge_weight, checkbox))
-				f.close()
-
+	def display_series_data(self, series_data):
 		# Sort the list by series number
-		self.series = sorted(self.series, key=lambda x: x[0])
-
-		# Only continue if chrono data was found
-		if len(self.series) == 0:
-			print("Didn't find any chrono data in this directory, bail")
-
-			msg = QMessageBox()
-			msg.setIcon(QMessageBox.Critical)
-			msg.setText("Unable to find chronograph data in '%s'" % path)
-			msg.setWindowTitle("Error")
-			msg.exec_()
-			return
+		self.series = sorted(series_data, key=lambda x: x[0])
 
 		# If we already have series data displayed, clear it out first
 		if self.scroll_area:
@@ -693,6 +588,260 @@ class ChronoPlotter(QWidget):
 	# Lambdas in loops are hard
 	def seriesCheckBoxChangedCb(self, idx):
 		return lambda: self.seriesCheckBoxChanged(idx)
+
+	def roundrobinDialog(self):
+		print("roundrobinDialog called")
+		dialog = RoundRobinDialog(self)
+		result = dialog.exec_()
+		if result:
+			print("Performing series conversion")
+			enabled_series = [x for x in self.series if x[4].isChecked()]
+
+			new_series = []
+
+			# Iterate number of velocities in enabled series (number of series in new_series)
+			for i in range(len(enabled_series[0][2]["m_velocs"])):
+				velocs = [x[2]["m_velocs"][i] for x in enabled_series]
+				print("new velocs:", velocs)
+
+				series_num = i
+				series_name = "Series %d" % (i + 1)
+				csv_data = {"series_num": i, "first_time": "", "first_date": "", "total_shots": len(velocs), "m_velocs": velocs, "v_lowest": min(velocs), "v_highest": max(velocs), "v_units": enabled_series[0][2]["v_units"]}
+				charge_weight = QDoubleSpinBox()
+				charge_weight.setDecimals(2)
+				charge_weight.setSingleStep(0.1)
+				charge_weight.setMinimumWidth(100)
+				charge_weight.setMaximumWidth(100)
+				checkbox = QCheckBox()
+				checkbox.setChecked(True)
+
+				new_series.append((i, "Series %d" % (i + 1), csv_data, charge_weight, checkbox))
+
+			print(new_series)
+
+			self.display_series_data(new_series)
+
+		else:
+			print("Not performing series conversion")
+
+	def autofillDialog(self):
+		print("autofillDialog called")
+		result, starting_charge, interval, direction = AutofillDialog.getValues(self)
+		if result == QDialog.Accepted:
+			print("User OK'd dialog")
+
+			cur_charge = starting_charge
+
+			for i, v in enumerate(self.series):
+				series_name = v[1]
+				csv_data = v[2]
+				charge_weight = v[3]
+				checkbox = v[4]
+				if checkbox.isChecked():
+					print("Setting series %s to %f" % (series_name, cur_charge))
+					charge_weight.setValue(cur_charge)
+					if direction == self.INCREASING:
+						cur_charge += interval
+					else:
+						cur_charge -= interval
+		else:
+			print("User cancelled dialog")
+
+	def enumerate_MS_dir(self, path):
+		ms_files = []
+
+		for fname in os.listdir(path):
+			fpath = os.path.join(path, fname)
+
+			ext = os.path.splitext(fpath)[1]
+
+			if ext.lower() == ".csv":
+				# We found a CSV file but don't know if it's a MagnetoSpeed file yet
+
+				print("Found CSV file '%s'" % fpath)
+
+				try:
+					f = open(fpath)
+				except:
+					print("'%s' does not exist" % fpath)
+					continue
+
+				csvfile = csv.reader(f, delimiter=',')
+				csv_datas = extract_magnetospeed_series_data(csvfile)
+
+				series_data = []
+
+				if csv_datas:
+					# We got valid MagnetoSpeed series data from the file
+					print("Detected MagnetoSpeed file")
+
+					for csv_data in csv_datas:
+						checkbox = QCheckBox()
+						checkbox.setChecked(True)
+
+						charge_weight = QDoubleSpinBox()
+						charge_weight.setDecimals(2)
+						charge_weight.setSingleStep(0.1)
+						charge_weight.setMinimumWidth(100)
+						charge_weight.setMaximumWidth(100)
+
+						series_data.append((csv_data["series_num"], "Series %d" % csv_data["series_num"], csv_data, charge_weight, checkbox))
+
+				f.close()
+
+				if series_data:
+					ms_files.append((self.MAGNETOSPEED, fpath, series_data))
+
+		return ms_files
+
+	def enumerate_LR_dir(self, path):
+		series_data = []
+
+		# Regex for LabRadar series directory
+		pattern = re.compile("^SR\d\d\d\d.*")
+
+		for fname in os.listdir(path):
+			fpath = os.path.join(path, fname)
+
+			if os.path.isdir(fpath) and pattern.match(fname):
+				print("Detected LabRadar series directory '%s'" % fpath)
+
+				csv_files = glob.glob(os.path.join(fpath, "* Report.csv"))
+				if len(csv_files) == 0:
+					print("No series CSV file found, skipping")
+					continue
+
+				# Just grab the first one
+				csv_path = csv_files[0]
+
+				try:
+					f = open(csv_path)
+				except:
+					print("%s does not exist" % csv_path)
+					continue
+
+				csvfile = csv.reader((x.replace('\0', '') for x in f), delimiter=';')
+				csv_data = extract_labradar_series_data(csvfile)
+				if csv_data == None:
+					print("Invalid series, skipping")
+					continue
+
+				series_num = csv_data["series_num"]
+
+				checkbox = QCheckBox()
+				checkbox.setChecked(True)
+
+				charge_weight = QDoubleSpinBox()
+				charge_weight.setDecimals(2)
+				charge_weight.setSingleStep(0.1)
+				charge_weight.setMinimumWidth(100)
+				charge_weight.setMaximumWidth(100)
+
+				series_data.append((series_num, fname, csv_data, charge_weight, checkbox))
+
+				f.close()
+
+		if series_data:
+			return (self.LABRADAR, path, series_data)
+		else:
+			return None
+
+	def dirDialog(self):
+		path = QFileDialog.getExistingDirectory(None, "Select directory")
+		print("Selected directory: %s" % path)
+
+		if path == "":
+			print("User didn't select a directory, bail")
+			return
+
+		series_data = []
+
+		# First, enumerate the directory for MagnetoSpeed data. Multiple series are self-contained within a single CSV file.
+		# There can potentially be multiple CSV files in the directory.
+		ms_series_datas = self.enumerate_MS_dir(path)
+		if ms_series_datas:
+			for ms_series_data in ms_series_datas:
+				series_data.append(ms_series_data)
+
+		# Next, look for LabRadar data. LabRadar has a LBR/ directory in the root of its drive filled with SR####/ directories.
+		# We handle the case where the user selected the root of the SD card (and the series directories are actually in LBR/),
+		# or if we're inside one of the actual series directories and we need to be one directory up to enumerate all of them.
+
+		lbr_path = os.path.join(path, "LBR")
+		if os.path.exists(lbr_path) and os.path.isdir(lbr_path):
+			path = lbr_path
+			print("Detected LabRadar directory '%s'. Using that directory instead." % lbr_path)
+
+		trk_path = os.path.join(path, "TRK")
+		if os.path.exists(trk_path) and os.path.isdir(trk_path):
+			path = os.path.abspath(os.path.join(path, ".."))
+			lr_data_found = True
+			print("Detected LabRadar directory '%s'. Using one directory level up instead." % trk_path)
+
+		lr_series_data = self.enumerate_LR_dir(path)
+		if lr_series_data:
+			series_data.append(lr_series_data)
+
+		# Only continue if chrono data was found
+		if len(series_data) == 0:
+			print("Didn't find any chrono data in this directory, bail")
+
+			msg = QMessageBox()
+			msg.setIcon(QMessageBox.Critical)
+			msg.setText("Unable to find chronograph data in '%s'" % path)
+			msg.setWindowTitle("Error")
+			msg.exec_()
+			return
+
+		# If multiple chrono files were found, prompt user to select one
+		if len(series_data) > 1:
+			display_data = []
+			for data in series_data:
+				if data[0] == self.LABRADAR:
+					chrono_type = "LabRadar"
+				else:
+					chrono_type = "MagnetoSpeed"
+
+				path = data[1]
+
+				num_shots = 0
+				for series in data[2]:
+					num_shots += len(series[2]["m_velocs"])
+
+				summary = "%d series, %d shots" % (len(data[2]), num_shots)
+				display_data.append("%s - %s - %s" % (chrono_type, summary, path))
+
+			item, ok = QInputDialog.getItem(self, "Select file to use", "Multiple chronograph files were found.\n\nPlease select which one to use:", display_data, 0, False)
+			print(item, ok)
+
+			if ok == False:
+				print("User cancelled chrono data selection dialog, bail")
+				return
+
+			idx = display_data.index(item)
+
+			self.display_series_data(series_data[idx][2])
+
+		# If a single chrono file was found, just use it
+		else:
+			data = series_data[0]
+			if data[0] == self.LABRADAR:
+				print("Detected single LabRadar directory '%s'" % data[1])
+				msg = QMessageBox()
+				msg.setIcon(QMessageBox.Information)
+				msg.setText("Detected LabRadar data\n\nUsing '%s'" % data[1])
+				msg.setWindowTitle("Success")
+				msg.exec_()
+			else:
+				print("Detected single MagnetoSpeed file '%s'" % data[1])
+
+				msg = QMessageBox()
+				msg.setIcon(QMessageBox.Information)
+				msg.setText("Detected MagnetoSpeed data\n\nUsing '%s'" % data[1])
+				msg.setWindowTitle("Success")
+				msg.exec_()
+
+			self.display_series_data(data[2])
 
 	def seriesCheckBoxChanged(self, idx):
 		checkbox = self.series_grid.itemAtPosition(idx, 0).widget()
