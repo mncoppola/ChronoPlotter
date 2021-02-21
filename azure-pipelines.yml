@@ -6,41 +6,6 @@ trigger:
     - v*
     
 jobs:
-- job: 'Ubuntu'
-  pool:
-    vmImage: 'ubuntu-18.04'
-
-  steps:
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '3.5'
-      addToPath: true
-  - task: CmdLine@2
-    inputs:
-      script: |
-        python -m pip install --upgrade pip
-        python -m pip install matplotlib
-        python -m pip install PyQt5
-        python -m pip install PyInstaller
-  - task: CmdLine@2
-    inputs:
-      script: 'python -m PyInstaller ChronoPlotter.py --onefile -n ChronoPlotter'
-  - task: PublishPipelineArtifact@1
-    inputs:
-      targetPath: '$(Pipeline.Workspace)/s/dist/ChronoPlotter'
-      artifact: 'build-ubuntu'
-      publishLocation: 'pipeline'
-  - task: GitHubRelease@1
-    inputs:
-      gitHubConnection: 'Github service connection'
-      repositoryName: 'mncoppola/ChronoPlotter'
-      action: 'edit'
-      target: '$(Build.SourceVersion)'
-      tag: '$(Build.SourceBranchName)'
-      assets: '$(Pipeline.Workspace)/s/dist/ChronoPlotter'
-      assetUploadMode: 'replace'
-      addChangeLog: false
-
 - job: 'Windows'
   pool:
     vmImage: 'windows-latest'
