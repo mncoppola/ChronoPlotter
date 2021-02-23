@@ -987,6 +987,9 @@ class ChronoPlotter(QWidget):
 				plt.plot(scatter_x, scatter_y, "o", color="#0536b0", markeredgewidth=0, markersize=6)
 
 			else:
+				for v in m_velocs:
+					all_points.append((enabled_i, v))
+
 				plt.errorbar(enabled_i, average, fmt="o", yerr=stdev, markersize=5, capsize=3, elinewidth=1, ecolor="black", markerfacecolor="#0536b0", markeredgecolor="#0536b0")
 
 			enabled_i += 1
