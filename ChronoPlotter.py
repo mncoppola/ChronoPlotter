@@ -472,6 +472,8 @@ class ChronoPlotter(QWidget):
 		form_layout2.addRow(QLabel("Brass:"), self.brass)
 		self.primer = QLineEdit()
 		form_layout2.addRow(QLabel("Primer:"), self.primer)
+		self.weather = QLineEdit()
+		form_layout2.addRow(QLabel("Weather:"), self.weather)
 
 		self.details_layout = QVBoxLayout()
 		self.details_layout.addLayout(form_layout2)
@@ -1137,6 +1139,7 @@ class ChronoPlotter(QWidget):
 		projectile = self.projectile.text()
 		brass = self.brass.text()
 		primer = self.primer.text()
+		weather = self.weather.text()
 
 		if self.weight_units.currentIndex() == self.GRAIN:
 			weight_units = "gr"
@@ -1151,7 +1154,7 @@ class ChronoPlotter(QWidget):
 		plt.subplots_adjust(top=0.8)
 		plt.title("%s\n\n" % graph_title, fontsize=28, color="#4d4d4d")
 		mid = (figure.subplotpars.right + figure.subplotpars.left) / 2
-		plt.suptitle(", ".join(filter(None, [rifle, propellant, projectile, brass, primer])), fontsize=14, color="#4d4d4d", y=0.88, x=mid)
+		plt.suptitle(", ".join(filter(None, [rifle, propellant, projectile, brass, primer, weather])), fontsize=14, color="#4d4d4d", y=0.88, x=mid)
 		plt.xlabel("Powder Charge (%s)" % weight_units, fontsize=14, labelpad=15, color="#4d4d4d")
 		plt.ylabel("Velocity (%s)" % v_units, fontsize=14, labelpad=15, color="#4d4d4d")
 
