@@ -542,23 +542,28 @@ class ChronoPlotter(QWidget):
 			self.scroll_vbox.addLayout(self.dir_autofill_layout)
 			self.dir_autofill_shown = True
 
+		checkbox_header = QCheckBox()
+		checkbox_header.setChecked(True)
+		checkbox_header.stateChanged.connect(self.headerCheckBoxChanged)
+		self.series_grid.addWidget(checkbox_header, 0, 0)
+
 		# Headers for series data
 		name_header = QLabel("Series Name")
 		#name_header.setStyleSheet("text-decoration: underline")
 		#name_header.setStyleSheet("font-weight: bold")
-		self.series_grid.addWidget(name_header, 0, 1)
+		self.series_grid.addWidget(name_header, 0, 1, Qt.AlignVCenter)
 		cw_header = QLabel("Charge Weight")
 		#cw_header.setStyleSheet("text-decoration: underline")
 		#cw_header.setStyleSheet("font-weight: bold")
-		self.series_grid.addWidget(cw_header, 0, 2)
+		self.series_grid.addWidget(cw_header, 0, 2, Qt.AlignVCenter)
 		result_header = QLabel("Series Result")
 		#result_header.setStyleSheet("text-decoration: underline")
 		#result_header.setStyleSheet("font-weight: bold")
-		self.series_grid.addWidget(result_header, 0, 3)
+		self.series_grid.addWidget(result_header, 0, 3, Qt.AlignVCenter)
 		date_header = QLabel("Series Date")
 		#date_header.setStyleSheet("text-decoration: underline")
 		#date_header.setStyleSheet("font-weight: bold")
-		self.series_grid.addWidget(date_header, 0, 4)
+		self.series_grid.addWidget(date_header, 0, 4, Qt.AlignVCenter)
 
 		for i, v in enumerate(self.series):
 			series_name = v[1]
@@ -569,7 +574,7 @@ class ChronoPlotter(QWidget):
 			checkbox.stateChanged.connect(self.seriesCheckBoxChangedCb(i + 1))
 
 			self.series_grid.addWidget(checkbox, i + 1, 0)
-			self.series_grid.addWidget(QLabel(series_name), i + 1, 1)
+			self.series_grid.addWidget(QLabel(series_name), i + 1, 1, Qt.AlignVCenter)
 
 			charge_weight_layout = QHBoxLayout()
 			charge_weight_layout.addWidget(charge_weight)
@@ -577,9 +582,10 @@ class ChronoPlotter(QWidget):
 			self.series_grid.addLayout(charge_weight_layout, i + 1, 2)
 
 			v_label = QLabel("%d shots, %d-%d %s" % (csv_data["total_shots"], csv_data["v_lowest"], csv_data["v_highest"], csv_data["v_units"]))
-			self.series_grid.addWidget(v_label, i + 1, 3)
+			self.series_grid.addWidget(v_label, i + 1, 3, Qt.AlignVCenter)
 			datetime_label = QLabel("%s %s" % (csv_data["first_date"], csv_data["first_time"]))
-			self.series_grid.addWidget(datetime_label, i + 1, 4)
+			self.series_grid.addWidget(datetime_label, i + 1, 4, Qt.AlignVCenter)
+			self.series_grid.setRowMinimumHeight(0, charge_weight.sizeHint().height())
 
 		self.series_grid.setRowStretch(len(self.series) + 1, 1)
 
@@ -844,6 +850,21 @@ class ChronoPlotter(QWidget):
 				msg.exec_()
 
 			self.display_series_data(data[2])
+
+	def headerCheckBoxChanged(self, state):
+		if state == Qt.Checked:
+			action = "checked"
+			for i, v in enumerate(self.series):
+				checkbox = v[4]
+				checkbox.setChecked(True)
+		else:
+			action = "unchecked"
+			for i, v in enumerate(self.series):
+				checkbox = v[4]
+				checkbox.setChecked(False)
+
+
+		print("Header checkbox was %s" % action)
 
 	def seriesCheckBoxChanged(self, idx):
 		checkbox = self.series_grid.itemAtPosition(idx, 0).widget()
