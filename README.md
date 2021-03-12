@@ -57,7 +57,7 @@ ChronoPlotter supports chronograph data recorded using the "round-robin" method 
 
 ![Populated OCW series data](https://github.com/mncoppola/ChronoPlotter/blob/main/images/ocw_1.png?raw=true)
 
-Click the `Convert from round-robin` button to open this dialog:
+Click `Convert from round-robin` to open this dialog:
 
 ![Convert OCW series dialog](https://github.com/mncoppola/ChronoPlotter/blob/main/images/ocw_2.png?raw=true)
 
