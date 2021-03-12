@@ -4,6 +4,7 @@ Easily generate graphs using recorded data from your chronograph. Supports LabRa
 
 Table of contents:
 * [Quick Start](#quick-start)
+* [Round-Robin (OCW) Testing](#round-robin-ocw-testing)
 * [Running ChronoPlotter with Python](#running-chronoplotter-with-python)
 * [Notes About PyInstaller](#notes-about-pyinstaller)
 
@@ -49,6 +50,20 @@ You can alternatively create a line chart with standard deviation error bars by 
 By default, ChronoPlotter includes ES (Extreme Spread), SD (Standard Deviation), and the series-to-series difference in velocity for each series in the graph. The average (mean) velocity for each series can also be included but is unchecked by default. You can add, remove, or change the location of these details in the graph under the `Graph options` section.
 
 Close the preview window, making sure not to close ChronoPlotter itself. Finally, click `Save graph as image` to save your graph as a .PNG, .SVG, or .PDF file.
+
+## Round-Robin (OCW) Testing
+
+ChronoPlotter supports chronograph data recorded using the "round-robin" method popular with [OCW testing](http://www.ocwreloading.com/). First, uncheck any series not part of the round-robin:
+
+![Populated OCW series data](https://github.com/mncoppola/ChronoPlotter/blob/main/images/ocw_1.png?raw=true)
+
+Click the `Convert from round-robin` button to open this dialog:
+
+![Convert OCW series dialog](https://github.com/mncoppola/ChronoPlotter/blob/main/images/ocw_2.png?raw=true)
+
+Then click `OK` to convert the series data into traditional series suitable for graphing. Note that ChronoPlotter does *not* alter your CSV files, this only converts the data loaded in the program:
+
+![Converted OCW series data](https://github.com/mncoppola/ChronoPlotter/blob/main/images/ocw_3.png?raw=true)
 
 ## Running ChronoPlotter with Python
 
