@@ -65,6 +65,8 @@ Then click `OK` to convert the series data into traditional series suitable for 
 
 ![Converted OCW series data](https://github.com/mncoppola/ChronoPlotter/blob/main/images/ocw_3.png?raw=true)
 
+Thanks to [TallMikeSTL](https://www.reddit.com/user/TallMikeSTL) for contributing test data.
+
 ## Running ChronoPlotter with Python
 
 Users can directly run `ChronoPlotter.py` as a Python script instead of using the prebuilt binaries. Python 3.5+ is required (for PyQt5)
