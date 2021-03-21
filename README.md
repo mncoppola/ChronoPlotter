@@ -4,7 +4,7 @@ Easily generate graphs using recorded data from your chronograph. Supports LabRa
 
 Table of contents:
 * [Quick Start](#quick-start)
-* [Round-Robin (OCW) and Satterlee Testing](#round-robin-ocw-satterlee-testing)
+* [Round-Robin (OCW) and Satterlee Testing](#round-robin-ocw-and-satterlee-testing)
 * [Running ChronoPlotter with Python](#running-chronoplotter-with-python)
 * [Notes About PyInstaller](#notes-about-pyinstaller)
 
