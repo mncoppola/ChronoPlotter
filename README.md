@@ -4,7 +4,7 @@ Easily generate graphs using recorded data from your chronograph. Supports LabRa
 
 Table of contents:
 * [Quick Start](#quick-start)
-* [Round-Robin (OCW) Testing](#round-robin-ocw-testing)
+* [Round-Robin (OCW) and Satterlee Testing](#round-robin-ocw-satterlee-testing)
 * [Running ChronoPlotter with Python](#running-chronoplotter-with-python)
 * [Notes About PyInstaller](#notes-about-pyinstaller)
 
@@ -51,7 +51,7 @@ By default, ChronoPlotter includes ES (Extreme Spread), SD (Standard Deviation),
 
 Close the preview window, making sure not to close ChronoPlotter itself. Finally, click `Save graph as image` to save your graph as a .PNG, .SVG, or .PDF file.
 
-## Round-Robin (OCW) Testing
+## Round-Robin (OCW) and Satterlee Testing
 
 ChronoPlotter supports chronograph data recorded using the "round-robin" method popular with [OCW testing](http://www.ocwreloading.com/). First, uncheck any series not part of the round-robin:
 
@@ -64,6 +64,8 @@ Click `Convert from round-robin` to open this dialog:
 Then click `OK` to convert the series data into traditional series suitable for graphing. Note that ChronoPlotter does *not* alter your CSV files, this only converts the data loaded in the program:
 
 ![Converted OCW series data](https://github.com/mncoppola/ChronoPlotter/blob/main/images/ocw_3.png?raw=true)
+
+Likewise, this same feature can be used to convert data recorded using the Satterlee method. This is because at its core Satterlee is simply a "one shot round-robin" test. To do so, uncheck all other series except for the one series containing Satterlee data, then click `Convert from round-robin` and proceed as usual.
 
 Thanks to [TallMikeSTL](https://www.reddit.com/user/TallMikeSTL) for contributing test data.
 
