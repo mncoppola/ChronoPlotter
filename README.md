@@ -65,7 +65,7 @@ Then click `OK` to convert the series data into traditional series suitable for 
 
 ![Converted OCW series data](https://github.com/mncoppola/ChronoPlotter/blob/main/images/ocw_3.png?raw=true)
 
-Likewise, this same feature can be used to convert data recorded using the Satterlee method. This is because at its core Satterlee is simply a "one shot round-robin" test. To do so, uncheck all other series except for the one series containing Satterlee data, then click `Convert from round-robin` and proceed as usual.
+Likewise, this same feature can be used to convert data recorded using the [Satterlee method](http://www.65guys.com/10-round-load-development-ladder-test/). This is because at its core Satterlee is simply a "one shot round-robin" test. To do so, uncheck all other series except for the one series containing Satterlee data, then click `Convert from round-robin` and proceed as usual.
 
 Thanks to [TallMikeSTL](https://www.reddit.com/user/TallMikeSTL) for contributing test data.
 
