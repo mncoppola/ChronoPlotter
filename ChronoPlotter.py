@@ -146,7 +146,7 @@ class RoundRobinDialog(QDialog):
 
 		self.label = QLabel()
 		self.label.setTextFormat(Qt.RichText)
-		self.label.setText("<p>This feature handles chronograph data recorded using the \"round-robin\" method popular with <a href=\"http://www.ocwreloading.com/\">OCW testing</a>.<p>For example a shooter might record three chronograph series, where each series contains 10 shots with 10 different charge weights. Use this feature to \"convert\" the data back into 10 series of three-shot strings.<p>Note: This will <i>not</i> alter your CSV files, this only converts the data loaded in ChronoPlotter. It's assumed that charge weights are shot in the same order in each series.<br>")
+		self.label.setText("<p>This feature handles chronograph data recorded using the \"round-robin\" method popular with <a href=\"http://www.ocwreloading.com/\">OCW testing</a>.<p>For example a shooter might record three chronograph series, where each series contains 10 shots with 10 different charge weights. Use this feature to \"convert\" the data back into 10 series of three-shot strings.<p>Data recorded using the <a href=\"http://www.65guys.com/10-round-load-development-ladder-test/\">Satterlee method</a> can be converted by using this feature with only a single series enabled (rather than multiple).<p>Note: This will <i>not</i> alter your CSV files, this only converts the data loaded in ChronoPlotter. If converting multiple series, it's assumed that charge weights are shot in the same order in each series.<br>")
 		self.label.setOpenExternalLinks(True)
 		self.label.setWordWrap(True)
 
