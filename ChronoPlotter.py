@@ -1041,7 +1041,11 @@ class ChronoPlotter(QWidget):
 			lowest = min(m_velocs)
 			average = numpy.mean(m_velocs)
 			es = highest - lowest
-			stdev = numpy.std(m_velocs, ddof=1)
+
+			if len(m_velocs) > 1:
+				stdev = numpy.std(m_velocs, ddof=1)
+			else:
+				stdev = 0
 
 			# Obtain display coordinates for points. We need to convert points for both highest/lowest shots and stdev
 			b_l_scatter_pix = ax.transData.transform_point((enabled_i, lowest))
@@ -1076,14 +1080,16 @@ class ChronoPlotter(QWidget):
 			above_annotations = []
 			below_annotations = []
 
-			if self.es_checkbox.isChecked():
+			# Place annotations on graph. Only display ES and SD if there is more than one shot in the series
+
+			if self.es_checkbox.isChecked() and len(m_velocs) > 1:
 				annotation = "ES: %d" % es
 				if self.es_location.currentIndex() == self.ABOVE_STRING:
 					above_annotations.append(annotation)
 				else:
 					below_annotations.append(annotation)
 
-			if self.sd_checkbox.isChecked():
+			if self.sd_checkbox.isChecked() and len(m_velocs) > 1:
 				annotation = "SD: %.1f" % stdev
 				if self.sd_location.currentIndex() == self.ABOVE_STRING:
 					above_annotations.append(annotation)
@@ -1091,7 +1097,12 @@ class ChronoPlotter(QWidget):
 					below_annotations.append(annotation)
 
 			if self.avg_checkbox.isChecked():
-				annotation = r'$\bar{x}$: %.1f' % average
+				# Only show the x-bar symbol and decimal place if there's more than one shot in the series
+				if len(m_velocs) > 1:
+					annotation = r'$\bar{x}$: %.1f' % average
+				else:
+					annotation = "%d" % average
+
 				if self.avg_location.currentIndex() == self.ABOVE_STRING:
 					above_annotations.append(annotation)
 				else:
