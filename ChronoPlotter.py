@@ -289,6 +289,9 @@ class ChronoPlotter(QWidget):
 
 		self.dir_autofill_shown = False
 
+		self.prev_data_dir = None
+		self.prev_save_dir = ""
+
 		self.initUI()
 
 	def initUI(self):
@@ -755,7 +758,9 @@ class ChronoPlotter(QWidget):
 			return None
 
 	def dirDialog(self):
-		path = QFileDialog.getExistingDirectory(None, "Select directory")
+		print("Previous directory: %s" % self.prev_data_dir)
+		path = QFileDialog.getExistingDirectory(None, "Select directory", self.prev_data_dir)
+		self.prev_data_dir = path
 		print("Selected directory: %s" % path)
 
 		if path == "":
@@ -1193,9 +1198,20 @@ class ChronoPlotter(QWidget):
 		plt.xticks(range(len(xticks)), xticks)
 
 		if save_without_showing:
+
+			# Use the graph title as the default filename, or just "graph.png" if empty
+			if graph_title == "":
+				file_name = "graph"
+			else:
+				file_name = graph_title
+			save_path = os.path.join(self.prev_save_dir, "%s.png" % file_name)
+			print("graph_title: '%s'" % graph_title)
+			print("file_name: '%s'" % file_name)
+			print("save_path: '%s'" % save_path)
 			filters = "PNG image (*.png);;SVG image (*.svg);;PDF file (*.pdf)"
-			path = QFileDialog().getSaveFileName(self, "Save graph as image", "graph.png", filters)[0]
+			path = QFileDialog().getSaveFileName(self, "Save graph as image", save_path, filters)[0]
 			print("User selected save path '%s'" % path)
+			self.prev_save_dir = os.path.dirname(path)
 
 			# User canceled file dialog
 			if path == "":
