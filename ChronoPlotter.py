@@ -27,17 +27,24 @@ def extract_labradar_series_data(csvfile):
 	csv_data = {"m_velocs": []}
 
 	try:
+		parsing_shots = False
+		first_shot_parsed = False
 		for idx, row in enumerate(csvfile):
-			if idx == 3:
-				csv_data["series_num"] = int(row[1])
-			elif idx == 4:
-				csv_data["total_shots"] = int(row[1])
-			elif idx == 6:
-				csv_data["v_units"] = row[1]
-			elif idx > 17:
-				if idx == 18:
+			if not parsing_shots:
+				if len(row) > 0:
+					if "Series No" in row[0]:
+						csv_data["series_num"] = int(row[1])
+					elif "Total number" in row[0]:
+						csv_data["total_shots"] = int(row[1])
+					elif "Units velocity" in row[0]:
+						csv_data["v_units"] = row[1]
+					elif "Shot ID" in row[0]:
+						parsing_shots = True
+			else:
+				if not first_shot_parsed:
 					csv_data["first_date"] = row[15]
 					csv_data["first_time"] = row[16]
+					first_shot_parsed = True
 				csv_data["m_velocs"].append(int(row[1]))
 
 		# Ensure we have a valid LabRadar series
@@ -57,7 +64,7 @@ def extract_labradar_series_data(csvfile):
 		return csv_data
 
 	except Exception as e:
-		print("File is not a well-formed LabRadar file, skipping")
+		print("File is not a well-formed LabRadar file, skipping:", e)
 		return None
 
 # Maybe make these two funcs return a list of series datas, then abstract out the series tuple creation
@@ -108,7 +115,7 @@ def extract_magnetospeed_series_data(csvfile):
 		return csv_datas
 
 	except Exception as e:
-		print("File is not a well-formed MagnetoSpeed file, skipping")
+		print("File is not a well-formed MagnetoSpeed file, skipping", e)
 		return None
 
 class QHLine(QFrame):
@@ -731,7 +738,17 @@ class ChronoPlotter(QWidget):
 					print("%s does not exist" % csv_path)
 					continue
 
-				csvfile = csv.reader((x.replace('\0', '') for x in f), delimiter=';')
+				# LabRadar CSV files can have either ';' or ',' delimiter
+				first_line = f.readline()
+				print("first line:", first_line)
+				if first_line.strip() == "sep=;":
+					delim = ';'
+				else:
+					delim = ','
+
+				print("Using delimiter '%s'" % delim)
+
+				csvfile = csv.reader((x.replace('\0', '') for x in f), delimiter=delim)
 				csv_data = extract_labradar_series_data(csvfile)
 				if csv_data == None:
 					print("Invalid series, skipping")
