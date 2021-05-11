@@ -1,27 +1,34 @@
 # ChronoPlotter
 
-Easily generate graphs using recorded data from your chronograph. Supports LabRadar and MagnetoSpeed with SD card. Create customizable graphs and charts comparing charge weight and velocity without manually entering your chronograph data.
+![ChronoPlotter logo](https://github.com/mncoppola/ChronoPlotter/blob/main/images/logo.png?raw=true)
+
+Easily generate graphs using recorded data from your chronograph. Supports LabRadar and MagnetoSpeed with SD card. Create customizable graphs and charts comparing charge weight and velocity without manually entering your chronograph data. Also supports creating graphs for seating depth testing.
 
 Table of contents:
 * [Quick Start](#quick-start)
 * [Round-Robin (OCW) and Satterlee Testing](#round-robin-ocw-and-satterlee-testing)
-* [Running ChronoPlotter with Python](#running-chronoplotter-with-python)
-* [Notes About PyInstaller](#notes-about-pyinstaller)
+* [Seating Depth Testing](#seating-depth-testing)
+* [Building ChronoPlotter from Source](#building-chronoplotter-from-source)
 
 ## Quick Start
 
-If you're looking to quickly get started with ChronoPlotter, download and run the prebuilt program:
+First, download and run ChronoPlotter for your operating system:
 
 * **Windows**: [ChronoPlotter.exe download](https://github.com/mncoppola/ChronoPlotter/releases/latest/download/ChronoPlotter.exe)
 * **MacOS**: [ChronoPlotter.dmg download](https://github.com/mncoppola/ChronoPlotter/releases/latest/download/ChronoPlotter.dmg)
 
-Nerds and power users should reference the [Running ChronoPlotter with Python](#running-chronoplotter-with-python) section.
+If your system is not listed above, check out the [Building ChronoPlotter from Source](#building-chronoplotter-from-source) section.
 
-**Note: The program may take a few moments to start.** The program's main screen will then show:
+The program's main screen will show:
 
 ![Home screen](https://github.com/mncoppola/ChronoPlotter/blob/main/images/1.png?raw=true)
 
-Make sure the SD card from your LabRadar or MagnetoSpeed is plugged into your computer. Then click `Select directory`, navigate to your SD card, and click `Select Folder` to confirm. The following example shows a LabRadar SD card:
+Make sure the SD card from your LabRadar or MagnetoSpeed is plugged into your computer.
+
+* For **LabRadar**: Click the `Select LabRadar directory` button, navigate to your SD card, and click `Select Folder` to confirm.
+* For **MagnetoSpeed**: Click the `Select MangetoSpeed file` button, navigate to your SD card, and select the `LOG.CSV` file.
+
+The following example shows a LabRadar SD card:
 
 ![Directory selection](https://github.com/mncoppola/ChronoPlotter/blob/main/images/2.png?raw=true)
 
@@ -49,7 +56,7 @@ You can alternatively create a line chart with standard deviation error bars by 
 
 By default, ChronoPlotter includes ES (Extreme Spread), SD (Standard Deviation), and the series-to-series difference in velocity for each series in the graph. The average (mean) velocity for each series can also be included but is unchecked by default. You can add, remove, or change the location of these details in the graph under the `Graph options` section.
 
-Close the preview window, making sure not to close ChronoPlotter itself. Finally, click `Save graph as image` to save your graph as a .PNG, .SVG, or .PDF file.
+Close the preview window, making sure not to close ChronoPlotter itself. Finally, click `Save graph as image` to save your graph as a .PNG, .JPG, or .PDF file.
 
 ## Round-Robin (OCW) and Satterlee Testing
 
@@ -69,27 +76,34 @@ Likewise, this same feature can be used to convert data recorded using the [Satt
 
 Thanks to [TallMikeSTL](https://www.reddit.com/user/TallMikeSTL) for contributing test data.
 
-## Running ChronoPlotter with Python
+## Seating Depth Testing
 
-Users can directly run `ChronoPlotter.py` as a Python script instead of using the prebuilt binaries. Python 3.5+ is required (for PyQt5)
+In addition to powder charge graphs, ChronoPlotter also supports creating graphs comparing bullet seating depth and group size. This data is not recorded on the chronograph SD card and must be inputted by the shooter.
 
-Install the following dependencies:
-```
-pip3 install --upgrade pip
-pip3 install numpy matplotlib PyQt5
-```
+Begin by clicking the `Seating depth` tab at top:
 
-Then run:
-```
-python3 ChronoPlotter.py
-```
+![Seating depth screen](https://github.com/mncoppola/ChronoPlotter/blob/main/images/seating_1.png?raw=true)
 
-## Notes About PyInstaller
+A single empty series is created by default. Click the `Add new group` button to create additional series for each depth being tested. Then enter a cartridge length for each series, or click the `Auto-fill cartridge lengths` button to automate the process:
 
-ChronoPlotter uses PyInstaller to generate single file executables for ease of distribution. It does not come without certain trade-offs, though. PyInstaller works by bundling an entire base Python installation + additional modules in a single file, and unpacking it to a temporary directory every time the executable is run. This results in large executables and slow program start time (up to 15 seconds on slow disks!)
+![Auto-fill cartridge lengths](https://github.com/mncoppola/ChronoPlotter/blob/main/images/seating_2.png?raw=true)
 
-A lot of time has been spent trying to optimize the ChronoPlotter executables. PyInstaller was chosen for its multi-platform support, ability to create single file executables, and current support by project maintainers. It also features a "hooks" subsystem that optimizes out unused portions of common Python modules. Other Python "freezing" solutions such as py2exe and cx_Freeze, as well as Python compilers such as Nuitka, were also explored but either ran into errors or produced even larger files than PyInstaller.
+Then proceed to enter the group size for each series. **NOTE:** ChronoPlotter defaults to CBTO (Cartridge Base to Ogive) for cartridge length and ES (Extreme Spread) for group size measurements. Other measurements may instead be selected if desired under the `Graph options` section on the right.
 
-Focus was instead placed on optimizing the PyInstaller-created executables themselves. ChronoPlotter uses matplotlib and PyQt5 which are both notoriously massive, complex dependencies that are difficult to efficiently freeze. By default, PyInstaller bundles all matplotlib backend modules it can find, however modifying PyInstaller to include a hardcoded whitelist provided only marginal improvement. Configuring PyInstaller to pack files with UPX provided the greatest file size savings (almost 10mb smaller) but increased the executable start time by upwards of 20-40% which became unacceptable on slow disks.
+To include details in the graph about the components used in testing, additionally fill in the text fields on the right:
 
-At the end of the day, ChronoPlotter ships standard PyInstaller single file executables. The correct solution is to rewrite the entire project in C++ and swap out matplotlib for a different native graphing solution. That's going to be a whole thing though, and there's something nice about the versatility and human-readability of Python. If you have any suggestions to improve ChronoPlotter or the way it's distributed, feel free to open an issue on the tracker.
+![Full seating depth details filled out](https://github.com/mncoppola/ChronoPlotter/blob/main/images/seating_3.png?raw=true)
+
+Clicking `Show graph` pops open a new window with a preview of the generated graph. **Note: This does not save your graph, only displays it.**
+
+The graph will look something like this:
+
+![Seating depth graph](https://github.com/mncoppola/ChronoPlotter/blob/main/images/seating_graph.png?raw=true)
+
+By default, ChronoPlotter includes the group size for each series in the graph. The series-to-series difference in group size can also be included but is unchecked by default. You can add, remove, or change the location of these details in the graph under the `Graph options` section.
+
+Close the preview window, making sure not to close ChronoPlotter itself. Finally, click `Save graph as image` to save your graph as a .PNG, .JPG, or .PDF file.
+
+## Building ChronoPlotter from Source
+
+TODO
