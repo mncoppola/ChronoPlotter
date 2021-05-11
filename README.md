@@ -54,7 +54,7 @@ You can alternatively create a line chart with standard deviation error bars by 
 
 ![Line chart + SD](https://github.com/mncoppola/ChronoPlotter/blob/main/images/line.png?raw=true)
 
-By default, ChronoPlotter includes ES (Extreme Spread), SD (Standard Deviation), and the series-to-series difference in velocity for each series in the graph. The average (mean) velocity for each series can also be included but is unchecked by default. You can add, remove, or change the location of these details in the graph under the `Graph options` section.
+By default, ChronoPlotter displays ES (Extreme Spread), SD (Standard Deviation), and the series-to-series difference in velocity for each series in the graph. The average (mean) velocity for each series can also be displayed but is unchecked by default. You can add, remove, or change the location of these details in the graph under the `Graph options` section.
 
 Close the preview window, making sure not to close ChronoPlotter itself. Finally, click `Save graph as image` to save your graph as a .PNG, .JPG, or .PDF file.
 
@@ -84,11 +84,11 @@ Begin by clicking the `Seating depth` tab at top:
 
 ![Seating depth screen](https://github.com/mncoppola/ChronoPlotter/blob/main/images/seating_1.png?raw=true)
 
-A single empty series is created by default. Click the `Add new group` button to create additional series for each depth being tested. Then enter a cartridge length for each series, or click the `Auto-fill cartridge lengths` button to automate the process:
+By default, a single empty series is created. Click the `Add new group` button to create additional series for each depth being tested. Then enter a cartridge length for each series, or click the `Auto-fill cartridge lengths` button to automate the process:
 
 ![Auto-fill cartridge lengths](https://github.com/mncoppola/ChronoPlotter/blob/main/images/seating_2.png?raw=true)
 
-Then proceed to enter the group size for each series. **NOTE:** ChronoPlotter defaults to CBTO (Cartridge Base to Ogive) for cartridge length and ES (Extreme Spread) for group size measurements. Other measurements may instead be selected if desired under the `Graph options` section on the right.
+Then proceed to enter the group size for each series. **NOTE:** ChronoPlotter defaults to CBTO (Cartridge Base to Ogive) for cartridge length and ES (Extreme Spread) for group size measurements. Other measurements may instead be selected under the `Graph options` section on the right, if desired.
 
 To include details in the graph about the components used in testing, additionally fill in the text fields on the right:
 
@@ -100,7 +100,7 @@ The graph will look something like this:
 
 ![Seating depth graph](https://github.com/mncoppola/ChronoPlotter/blob/main/images/seating_graph.png?raw=true)
 
-By default, ChronoPlotter includes the group size for each series in the graph. The series-to-series difference in group size can also be included but is unchecked by default. You can add, remove, or change the location of these details in the graph under the `Graph options` section.
+By default, ChronoPlotter displays the group size for each series in the graph. The series-to-series difference in group size can also be displayed but is unchecked by default. You can add, remove, or change the location of these details in the graph under the `Graph options` section.
 
 Close the preview window, making sure not to close ChronoPlotter itself. Finally, click `Save graph as image` to save your graph as a .PNG, .JPG, or .PDF file.
 
