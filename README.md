@@ -106,4 +106,54 @@ Close the preview window, making sure not to close ChronoPlotter itself. Finally
 
 ## Building ChronoPlotter from Source
 
-TODO
+For most general purposes, use the prebuilt executable files available for download at the top of the [quick start](#quick-start) section.
+
+If your operating system is not listed, or if you'd like to make changes to the program, ChronoPlotter can alternatively be built from source. The project is written using the [Qt](https://www.qt.io/) framework. It targets Qt version 5.12.2, but other Qt versions may potentially work as well.
+
+### Linux (Ubuntu)
+
+To build for Ubuntu, first install dependencies:
+
+```
+$ sudo apt-get install build-essential qt5-default qt5-qmake
+```
+
+Then build with the commands:
+
+```
+$ qmake
+$ make
+```
+
+The binary `ChronoPlotter` will then be created. Other Linux distributions may require different dependencies but will follow a similar process.
+
+### MacOS
+
+To build for MacOS, first install dependencies:
+
+```
+$ brew install qt@5
+$ brew link qt5 --force
+```
+
+Then build with the commands:
+
+```
+$ qmake
+$ make
+```
+
+The app directory `ChronoPlotter.app/` will then be created.
+
+### Windows
+
+To build for Windows, run the following commands:
+
+```
+> qmake -config release
+> mingw32-make
+```
+
+The binary `release\ChronoPlotter.exe` will then be created.
+
+At this time, only MingGW has been tested for building on Windows. It may be possible to use MSVC.
