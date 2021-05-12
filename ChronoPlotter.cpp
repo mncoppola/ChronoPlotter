@@ -28,8 +28,6 @@
 #include <QDialogButtonBox>
 #include <QDialog>
 #include <QByteArray>
-#include <QSvgWidget>
-#include <QSvgRenderer>
 #include "qcustomplot/qcustomplot.h"
 
 #include "ChronoPlotter.h"
