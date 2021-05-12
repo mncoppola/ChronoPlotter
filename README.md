@@ -118,7 +118,7 @@ To build for Ubuntu, first install dependencies:
 $ sudo apt-get install build-essential qt5-default qt5-qmake
 ```
 
-Then build with the commands:
+Then build with:
 
 ```
 $ qmake
@@ -136,7 +136,7 @@ $ brew install qt@5
 $ brew link qt5 --force
 ```
 
-Then build with the commands:
+Then build with:
 
 ```
 $ qmake
@@ -147,7 +147,7 @@ The app directory `ChronoPlotter.app/` will then be created.
 
 ### Windows
 
-To build for Windows, run the following commands:
+To build for Windows, after [installing Qt](https://doc.qt.io/qt-5/windows.html) run the following commands:
 
 ```
 > qmake -config release
