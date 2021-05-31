@@ -16,6 +16,7 @@
 #include <QScrollArea>
 #include <QGridLayout>
 #include <QDialog>
+#include <QMainWindow>
 #include "qcustomplot/qcustomplot.h"
 
 #define CHRONOPLOTTER_VERSION "2.0.0"
@@ -46,6 +47,18 @@
 
 #define ABOVE_STRING 0
 #define BELOW_STRING 0
+
+class MainWindow : public QMainWindow
+{
+	Q_OBJECT
+
+	public:
+		MainWindow() : QMainWindow() {};
+		~MainWindow() {};
+
+	protected:
+		void closeEvent(QCloseEvent *);
+};
 
 struct ChronoSeries
 {

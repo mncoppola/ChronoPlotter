@@ -3096,6 +3096,19 @@ About::About ( QWidget *parent )
 	setLayout(layout);
 }
 
+void MainWindow::closeEvent ( QCloseEvent *event )
+{
+	qDebug() << "closeEvent called";
+
+	event->ignore();
+
+	QMessageBox *box = new QMessageBox(QMessageBox::Question, "ChronoPlotter", "Are you sure you want to exit?", QMessageBox::Yes | QMessageBox::Cancel, this);
+
+	QObject::connect(box->button(QMessageBox::Yes), &QAbstractButton::clicked, this, &QApplication::quit);
+	QObject::connect(box->button(QMessageBox::Cancel), &QAbstractButton::clicked, box, &QObject::deleteLater);
+	box->show();
+}
+
 int main ( int argc, char *argv[] )
 {
 	QApplication a(argc, argv);
@@ -3120,11 +3133,13 @@ int main ( int argc, char *argv[] )
 	QVBoxLayout *mainLayout = new QVBoxLayout();
 	mainLayout->addWidget(tabs);
 
+	MainWindow *mainWindow = new MainWindow();
 	QWidget *w = new QWidget();
 	w->setLayout(mainLayout);
-	w->setGeometry(300, 300, 1100, mainLayout->sizeHint().height());
-	w->setWindowTitle("ChronoPlotter");
-	w->show();
+	mainWindow->setCentralWidget(w);
+	mainWindow->setGeometry(300, 300, 1100, mainLayout->sizeHint().height());
+	mainWindow->setWindowTitle("ChronoPlotter");
+	mainWindow->show();
 
 	return a.exec();
 }
