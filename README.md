@@ -78,13 +78,13 @@ Thanks to [TallMikeSTL](https://www.reddit.com/user/TallMikeSTL) for contributin
 
 ## Seating Depth Testing
 
-In addition to powder charge graphs, ChronoPlotter also supports creating graphs comparing bullet seating depth and group size. This data is not recorded on the chronograph SD card and must be inputted by the shooter.
+In addition to powder charge graphs, ChronoPlotter also supports creating graphs comparing bullet seating depth and group size. This data must be separately recorded and inputted by the shooter.
 
 Begin by clicking the `Seating depth` tab at top:
 
 ![Seating depth screen](https://github.com/mncoppola/ChronoPlotter/blob/main/images/seating_1.png?raw=true)
 
-By default, a single empty series is created. Click the `Add new group` button to create additional series for each depth being tested. Then enter a cartridge length for each series, or click the `Auto-fill cartridge lengths` button to automate the process:
+By default, a single empty series is created. Click the `Add new group` button to create additional series for each cartridge length being tested. Then enter a cartridge length for each series, or click the `Auto-fill cartridge lengths` button to automate the process:
 
 ![Auto-fill cartridge lengths](https://github.com/mncoppola/ChronoPlotter/blob/main/images/seating_2.png?raw=true)
 
@@ -108,7 +108,7 @@ Close the preview window, making sure not to close ChronoPlotter itself. Finally
 
 For most general purposes, use the prebuilt executable files available for download at the top of the [quick start](#quick-start) section.
 
-If your operating system is not listed, or if you'd like to make changes to the program, ChronoPlotter can alternatively be built from source. The project is written using the [Qt](https://www.qt.io/) framework. It targets Qt version 5.12.2, but other Qt versions may potentially work as well.
+If your operating system is not listed, or if you'd like to make changes to the program, ChronoPlotter can alternatively be built from source. The project is written using the [Qt framework](https://www.qt.io/). It targets Qt version 5.12.2, but other Qt versions may potentially work as well.
 
 ### Linux (Ubuntu)
 
@@ -132,7 +132,7 @@ The binary `ChronoPlotter` will then be created. Other Linux distributions may r
 To build for MacOS, first install dependencies:
 
 ```
-$ brew install qt@5
+$ brew install qt5
 $ brew link qt5 --force
 ```
 
@@ -147,7 +147,7 @@ The app directory `ChronoPlotter.app/` will then be created.
 
 ### Windows
 
-To build for Windows, after [installing Qt](https://doc.qt.io/qt-5/windows.html) run the following commands:
+To build for Windows, first [install Qt](https://doc.qt.io/qt-5/windows.html) then run the following commands:
 
 ```
 > qmake -config release
