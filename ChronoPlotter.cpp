@@ -1465,7 +1465,17 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 			qDebug() << "error, shouldn't be reached";
 			res = false;
 		}
-		qDebug() << res;
+
+		qDebug() << "save file res =" << res;
+
+		if ( res )
+		{
+			QMessageBox::information(this, "Save file", QString("Saved file to '%1'").arg(path), QMessageBox::Ok, QMessageBox::Ok);
+		}
+		if ( res == false )
+		{
+			QMessageBox::warning(this, "Save file", QString("Unable to save file to '%1'\n\nPlease choose a different path").arg(path), QMessageBox::Ok, QMessageBox::Ok);
+		}
 	}
 }
 
@@ -3060,7 +3070,17 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 			qDebug() << "error, shouldn't be reached";
 			res = false;
 		}
-		qDebug() << res;
+
+		qDebug() << "save file res =" << res;
+
+		if ( res )
+		{
+			QMessageBox::information(this, "Save file", QString("Saved file to '%1'").arg(path), QMessageBox::Ok, QMessageBox::Ok);
+		}
+		if ( res == false )
+		{
+			QMessageBox::warning(this, "Save file", QString("Unable to save file to '%1'\n\nPlease choose a different path").arg(path), QMessageBox::Ok, QMessageBox::Ok);
+		}
 	}
 }
 
