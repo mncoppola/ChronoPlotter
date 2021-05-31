@@ -298,9 +298,9 @@ PowderTest::PowderTest ( QWidget *parent )
 	qDebug() << "Powder test";
 
 	graphPreview = NULL;
-	prevLabRadarDir = "";
-	prevMagnetoSpeedDir = "";
-	prevSaveDir = "";
+	prevLabRadarDir = QDir::homePath();
+	prevMagnetoSpeedDir = QDir::homePath();
+	prevSaveDir = QDir::homePath();
 	utilitiesDisplayed = false;
 
 	/* Left panel */
@@ -2221,7 +2221,7 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 	/* Left panel */
 
 	graphPreview = NULL;
-	prevSaveDir = "";
+	prevSaveDir = QDir::homePath();
 
 	QVBoxLayout *leftLayout = new QVBoxLayout();
 
