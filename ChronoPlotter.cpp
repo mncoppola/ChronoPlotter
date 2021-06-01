@@ -3385,7 +3385,7 @@ int main ( int argc, char *argv[] )
 	QWidget *w = new QWidget();
 	w->setLayout(mainLayout);
 	mainWindow->setCentralWidget(w);
-	mainWindow->setGeometry(300, 300, 1100, mainLayout->sizeHint().height());
+	mainWindow->setGeometry(300, 300, 1200, mainLayout->sizeHint().height());
 	mainWindow->setWindowTitle("ChronoPlotter");
 	mainWindow->show();
 
