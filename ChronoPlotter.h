@@ -186,8 +186,10 @@ class PowderTest : public QWidget
 		void avgCheckBoxChanged(bool);
 		void vdCheckBoxChanged(bool);
 		void trendCheckBoxChanged(bool);
+		void loadNewChronographData(bool);
 		void selectLabRadarDirectory(bool);
 		void selectMagnetoSpeedFile(bool);
+		void selectProChronoFile(bool);
 		void rrClicked(bool);
 		void autofillClicked(bool);
 		void headerCheckBoxChanged(int);
@@ -199,6 +201,7 @@ class PowderTest : public QWidget
 		void optionCheckBoxChanged(QCheckBox *, QLabel *, QComboBox *);
 		ChronoSeries *ExtractLabRadarSeries ( QTextStream & );
 		QList<ChronoSeries *> ExtractMagnetoSpeedSeries ( QTextStream & );
+		QList<ChronoSeries *> ExtractProChronoSeries ( QTextStream & );
 		void DisplaySeriesData ( void );
 		void renderGraph ( bool );
 
@@ -206,12 +209,12 @@ class PowderTest : public QWidget
 		GraphPreview *graphPreview;
 		QString prevLabRadarDir;
 		QString prevMagnetoSpeedDir;
+		QString prevProChronoDir;
 		QString prevSaveDir;
 		QStackedWidget *stackedWidget;
-		QVBoxLayout *scrollLayout;
+		QWidget *scrollWidget;
 		QScrollArea *scrollArea;
 		QGridLayout *seriesGrid;
-		bool utilitiesDisplayed;
 		QLineEdit *graphTitle;
 		QLineEdit *rifle;
 		QLineEdit *projectile;

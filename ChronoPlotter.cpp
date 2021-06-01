@@ -300,8 +300,8 @@ PowderTest::PowderTest ( QWidget *parent )
 	graphPreview = NULL;
 	prevLabRadarDir = QDir::homePath();
 	prevMagnetoSpeedDir = QDir::homePath();
+	prevProChronoDir = QDir::homePath();
 	prevSaveDir = QDir::homePath();
-	utilitiesDisplayed = false;
 
 	/* Left panel */
 
@@ -324,6 +324,13 @@ PowderTest::PowderTest ( QWidget *parent )
 	msFileButton->setMinimumHeight(50);
 	msFileButton->setMaximumHeight(50);
 
+	QPushButton *pcFileButton = new QPushButton("Select ProChrono file");
+	connect(pcFileButton, SIGNAL(clicked(bool)), this, SLOT(selectProChronoFile(bool)));
+	pcFileButton->setMinimumWidth(300);
+	pcFileButton->setMaximumWidth(300);
+	pcFileButton->setMinimumHeight(50);
+	pcFileButton->setMaximumHeight(50);
+
 	QVBoxLayout *placeholderLayout = new QVBoxLayout();
 	placeholderLayout->addStretch(0);
 	placeholderLayout->addWidget(selectLabel);
@@ -332,6 +339,8 @@ PowderTest::PowderTest ( QWidget *parent )
 	placeholderLayout->setAlignment(lrDirButton, Qt::AlignCenter);
 	placeholderLayout->addWidget(msFileButton);
 	placeholderLayout->setAlignment(msFileButton, Qt::AlignCenter);
+	placeholderLayout->addWidget(pcFileButton);
+	placeholderLayout->setAlignment(pcFileButton, Qt::AlignCenter);
 	placeholderLayout->addStretch(0);
 
 	QWidget *placeholderWidget = new QWidget();
@@ -341,10 +350,10 @@ PowderTest::PowderTest ( QWidget *parent )
 	stackedWidget->addWidget(placeholderWidget);
 	stackedWidget->setCurrentIndex(0);
 
-	scrollLayout = new QVBoxLayout();
-	scrollLayout->addWidget(stackedWidget);
+	QVBoxLayout *stackedLayout = new QVBoxLayout();
+	stackedLayout->addWidget(stackedWidget);
 	QGroupBox *chronoGroupBox = new QGroupBox("Chronograph data:");
-	chronoGroupBox->setLayout(scrollLayout);
+	chronoGroupBox->setLayout(stackedLayout);
 
 	leftLayout->addWidget(chronoGroupBox);
 
@@ -509,7 +518,9 @@ void PowderTest::DisplaySeriesData ( void )
 	std::sort(seriesData.begin(), seriesData.end(), ChronoSeriesComparator);
 
 	// If we already have series data displayed, clear it out first. This call is a no-op if scrollArea is not already added to stackedWidget.
-	stackedWidget->removeWidget(scrollArea);
+	stackedWidget->removeWidget(scrollWidget);
+
+	QVBoxLayout *scrollLayout = new QVBoxLayout();
 
 	// Wrap grid in a widget to make the grid scrollable
 	QWidget *scrollAreaWidget = new QWidget();
@@ -526,43 +537,37 @@ void PowderTest::DisplaySeriesData ( void )
 	scrollArea->setWidget(scrollAreaWidget);
 	scrollArea->setWidgetResizable(true);
 
-	stackedWidget->addWidget(scrollArea);
-	stackedWidget->setCurrentWidget(scrollArea);
+	scrollLayout->addWidget(scrollArea);
 
-	// Now that we've hidden the placeholder text + buttons, reveal the utilities buttons under the scroll area
-	if ( ! utilitiesDisplayed )
-	{
-		// Create hidden buttons under the scroll area. They'll be revealed once the left panel is replaced with chrono series data.
+	/* Create utilities toolbar under scroll area */
 
-		QPushButton *lrDirButton2 = new QPushButton("Select LabRadar dir");
-		connect(lrDirButton2, SIGNAL(clicked(bool)), this, SLOT(selectLabRadarDirectory(bool)));
-		lrDirButton2->setMinimumWidth(225);
-		lrDirButton2->setMaximumWidth(225);
+	QPushButton *loadNewButton = new QPushButton("Load new chronograph file");
+	connect(loadNewButton, SIGNAL(clicked(bool)), this, SLOT(loadNewChronographData(bool)));
+	loadNewButton->setMinimumWidth(225);
+	loadNewButton->setMaximumWidth(225);
 
-		QPushButton *msDirButton2 = new QPushButton("Select MagnetoSpeed file");
-		connect(msDirButton2, SIGNAL(clicked(bool)), this, SLOT(selectMagnetoSpeedFile(bool)));
-		msDirButton2->setMinimumWidth(225);
-		msDirButton2->setMaximumWidth(225);
+	QPushButton *rrButton = new QPushButton("Convert from round-robin");
+	connect(rrButton, SIGNAL(clicked(bool)), this, SLOT(rrClicked(bool)));
+	rrButton->setMinimumWidth(225);
+	rrButton->setMaximumWidth(225);
 
-		QPushButton *rrButton = new QPushButton("Convert from round-robin");
-		connect(rrButton, SIGNAL(clicked(bool)), this, SLOT(rrClicked(bool)));
-		rrButton->setMinimumWidth(225);
-		rrButton->setMaximumWidth(225);
+	QPushButton *autofillButton = new QPushButton("Auto-fill charge weights");
+	connect(autofillButton, SIGNAL(clicked(bool)), this, SLOT(autofillClicked(bool)));
+	autofillButton->setMinimumWidth(225);
+	autofillButton->setMaximumWidth(225);
 
-		QPushButton *autofillButton = new QPushButton("Auto-fill charge weights");
-		connect(autofillButton, SIGNAL(clicked(bool)), this, SLOT(autofillClicked(bool)));
-		autofillButton->setMinimumWidth(225);
-		autofillButton->setMaximumWidth(225);
+	QHBoxLayout *utilitiesLayout = new QHBoxLayout();
+	utilitiesLayout->addWidget(loadNewButton);
+	utilitiesLayout->addWidget(rrButton);
+	utilitiesLayout->addWidget(autofillButton);
 
-		QHBoxLayout *utilitiesLayout = new QHBoxLayout();
-		utilitiesLayout->addWidget(lrDirButton2);
-		utilitiesLayout->addWidget(msDirButton2);
-		utilitiesLayout->addWidget(rrButton);
-		utilitiesLayout->addWidget(autofillButton);
+	scrollLayout->addLayout(utilitiesLayout);
 
-		scrollLayout->addLayout(utilitiesLayout);
-		utilitiesDisplayed = true;
-	}
+	scrollWidget = new QWidget();
+	scrollWidget->setLayout(scrollLayout);
+
+	stackedWidget->addWidget(scrollWidget);
+	stackedWidget->setCurrentWidget(scrollWidget);
 
 	QCheckBox *headerCheckBox = new QCheckBox();
 	headerCheckBox->setChecked(true);
@@ -1597,6 +1602,26 @@ void PowderTest::optionCheckBoxChanged ( QCheckBox *checkBox, QLabel *label, QCo
 	}
 }
 
+void PowderTest::loadNewChronographData ( bool state )
+{
+	qDebug() << "loadNewChronographData state =" << state;
+
+	QMessageBox::StandardButton reply;
+	reply = QMessageBox::question(this, "Load new data", "Are you sure you want to load new chronograph data?\n\nThis will clear your current work.", QMessageBox::Yes | QMessageBox::Cancel);
+
+	if ( reply == QMessageBox::Yes )
+	{
+		qDebug() << "User said yes";
+
+		// Remove the current chronograph data. This returns to the initial screen to choose a new chronograph file.
+		stackedWidget->removeWidget(scrollWidget);
+	}
+	else
+	{
+		qDebug() << "User said cancel";
+	}
+}
+
 void PowderTest::selectLabRadarDirectory ( bool state )
 {
 	qDebug() << "selectLabRadarDirectory state =" << state;
@@ -1955,6 +1980,209 @@ QList<ChronoSeries *> PowderTest::ExtractMagnetoSpeedSeries ( QTextStream &csv )
 		}
 
 		i++;
+	}
+
+	return allSeries;
+}
+
+void PowderTest::selectProChronoFile ( bool state )
+{
+	qDebug() << "selectProChronoFile state =" << state;
+
+	qDebug() << "Previous directory:" << prevProChronoDir;
+
+	QString path = QFileDialog::getOpenFileName(this, "Select file", prevProChronoDir, "CSV files (*.csv)");
+	prevProChronoDir = path;
+
+	qDebug() << "Selected file:" << path;
+
+	if ( path.isEmpty() )
+	{
+		qDebug() << "User didn't select a file, bail";
+		return;
+	}
+
+	seriesData.clear();
+
+	/*
+	 * ProChrono records all of its series data in a single .CSV file
+	 */
+
+	QFile csvFile(path);
+	csvFile.open(QIODevice::ReadOnly);
+	QTextStream csv(&csvFile);
+
+	QList<ChronoSeries *> allSeries = ExtractProChronoSeries(csv);
+
+	qDebug() << "Got allSeries from ExtractProChronoSeries with size" << allSeries.size();
+
+	if ( ! allSeries.empty() )
+	{
+		qDebug() << "Detected ProChrono file";
+
+		for ( int i = 0; i < allSeries.size(); i++ )
+		{
+			ChronoSeries *series = allSeries.at(i);
+
+			series->enabled = new QCheckBox();
+			series->enabled->setChecked(true);
+
+			series->chargeWeight = new QDoubleSpinBox();
+			series->chargeWeight->setDecimals(2);
+			series->chargeWeight->setSingleStep(0.1);
+			series->chargeWeight->setMinimumWidth(100);
+			series->chargeWeight->setMaximumWidth(100);
+
+			seriesData.append(series);
+		}
+	}
+
+	csvFile.close();
+
+	/* We're finished parsing the file */
+
+	if ( seriesData.empty() )
+	{
+		qDebug() << "Didn't find any chrono data in this file, bail";
+
+		QMessageBox *msg = new QMessageBox();
+		msg->setIcon(QMessageBox::Critical);
+		msg->setText(QString("Unable to find ProChrono data in '%1'").arg(path));
+		msg->setWindowTitle("Error");
+		msg->exec();
+	}
+	else
+	{
+		qDebug() << "Detected ProChrono file" << path;
+
+		QMessageBox *msg = new QMessageBox();
+		msg->setIcon(QMessageBox::Information);
+		msg->setText(QString("Detected ProChrono data\n\nUsing '%1'").arg(path));
+		msg->setWindowTitle("Success");
+		msg->exec();
+
+		// Proceed to display the data
+		DisplaySeriesData();
+	}
+}
+
+QList<ChronoSeries *> PowderTest::ExtractProChronoSeries ( QTextStream &csv )
+{
+	QList<ChronoSeries *> allSeries;
+	ChronoSeries *curSeries = new ChronoSeries();
+	curSeries->isValid = false;
+	curSeries->seriesNum = -1;
+
+	int i = 0;
+	while ( ! csv.atEnd() )
+	{
+		QString line = csv.readLine();
+
+		// ProChrono uses comma (,) as delimeter
+		QStringList rows(line.split(","));
+
+		// Trim whitespace from cells
+		QMutableStringListIterator it(rows);
+		while ( it.hasNext() )
+		{
+			it.next();
+			it.setValue(it.value().trimmed());
+		}
+
+		qDebug() << "Line" << i << ":" << rows;
+
+		// Validate the first row header
+		if ( i == 0 )
+		{
+			if ( (rows.size() >= 9) && (rows.at(0) == "Shot List") && (rows.at(1) == "Index") && (rows.at(2) == "Velocity") )
+			{
+				qDebug() << "Found the ProChrono header";
+			}
+			else
+			{
+				qDebug() << "File doesn't have the ProChrono header, bailing";
+				return allSeries;
+			}
+		}
+
+		if ( rows.size() >= 3 )
+		{
+			if ( rows.at(0) == "Shot List" )
+			{
+				// skip column headers
+				qDebug() << "Skipping column headers";
+			}
+			else
+			{
+				bool ok = false;
+				int index = rows.at(1).toInt(&ok);
+
+				// If cell is a valid integer, the row is a shot entry
+				if ( ok )
+				{
+					if ( index == 1 )
+					{
+						 // First shot in the series. End the previous series (if necessary) and start a new one.
+
+						if ( curSeries->muzzleVelocities.size() > 0 )
+						{
+							qDebug() << "Adding curSeries to allSeries";
+
+							allSeries.append(curSeries);
+						}
+
+						qDebug() << "Beginning new series";
+
+						curSeries = new ChronoSeries();
+						curSeries->isValid = true;
+						curSeries->seriesNum = -1;
+						curSeries->name = rows.at(0);
+						curSeries->velocityUnits = "ft/s";
+					}
+
+					if ( curSeries->firstDate.isNull() && (rows.size() >= 9) )
+					{
+						QStringList dateTime = rows.at(8).split(" ");
+						if ( dateTime.size() == 2 )
+						{
+							curSeries->firstDate = dateTime.at(0);
+							curSeries->firstTime = dateTime.at(1);
+							qDebug() << "firstDate =" << curSeries->firstDate;
+							qDebug() << "firstTime =" << curSeries->firstTime;
+						}
+						else
+						{
+							qDebug() << "Failed to split datetime cell:" << rows.at(8);
+						}
+					}
+
+					curSeries->muzzleVelocities.append(rows.at(2).toInt());
+					qDebug() << "muzzleVelocities +=" << rows.at(2).toInt();
+				}
+			}
+		}
+
+		i++;
+	}
+
+	// End of the file. Finish parsing the current series.
+	qDebug() << "End of file";
+
+	if ( curSeries->muzzleVelocities.size() > 0 )
+	{
+		qDebug() << "Adding curSeries to allSeries";
+
+		allSeries.append(curSeries);
+	}
+
+	// ProChrono files list series in reverse order from newest to oldest. Iterate through and
+	// set the seriesNum's accordingly.
+	int seriesNum = 1;
+	for ( i = allSeries.size() - 1; i >= 0; i-- )
+	{
+		ChronoSeries *series = allSeries.at(i);
+		series->seriesNum = seriesNum;
+		seriesNum++;
 	}
 
 	return allSeries;
