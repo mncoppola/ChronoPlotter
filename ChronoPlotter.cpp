@@ -292,6 +292,99 @@ AutofillSeatingValues *AutofillSeatingDialog::getValues ( void )
 	return values;
 }
 
+EnterVelocitiesDialog::EnterVelocitiesDialog ( ChronoSeries *series, QDialog *parent )
+	: QDialog(parent)
+{
+	qDebug() << "Enter velocities dialog";
+
+	setWindowTitle("Enter velocities");
+
+	QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+	connect(buttonBox, &QDialogButtonBox::accepted, this, &EnterVelocitiesDialog::accept);
+	connect(buttonBox, &QDialogButtonBox::rejected, this, &EnterVelocitiesDialog::reject);
+
+	QVBoxLayout *layout = new QVBoxLayout();
+
+	velocitiesEntered = new QLabel(QString("Velocities entered: %1").arg(series->muzzleVelocities.size()));
+	layout->addWidget(velocitiesEntered);
+
+	textEdit = new QTextEdit();
+	textEdit->setPlaceholderText("Enter velocity numbers here, each one on a new line.\n\nFor example:\n2785\n2782\n2798");
+
+	if ( series->muzzleVelocities.size() > 0 )
+	{
+		QString prevVelocs;
+		for ( int i = 0; i < series->muzzleVelocities.size(); i++ )
+		{
+			prevVelocs += QString::number(series->muzzleVelocities.at(i));
+			if ( i < (series->muzzleVelocities.size() - 1) )
+			{
+				prevVelocs += "\n";
+			}
+		}
+
+		textEdit->setPlainText(prevVelocs);
+	}
+
+	connect(textEdit, SIGNAL(textChanged()), this, SLOT(textChanged()));
+	layout->addWidget(textEdit);
+
+	layout->addWidget(buttonBox);
+	setLayout(layout);
+
+	setFixedSize(sizeHint());
+}
+
+void EnterVelocitiesDialog::textChanged ( )
+{
+	//qDebug() << "textChanged";
+
+	QStringList list = textEdit->toPlainText().split("\n");
+	//qDebug() << list;
+
+	int numVelocities = 0;
+	for ( int i = 0; i < list.length(); i++ )
+	{
+		// validate inputted number
+		bool ok;
+		list.at(i).toInt(&ok);
+		if ( ok )
+		{
+			numVelocities++;
+		}
+		else
+		{
+			qDebug() << "Skipping invalid number:" << list.at(i);
+		}
+	}
+
+	velocitiesEntered->setText(QString("Velocities entered: %1").arg(numVelocities));
+}
+
+QList<int> EnterVelocitiesDialog::getValues ( void )
+{
+	QList<int> values;
+
+	QStringList list = textEdit->toPlainText().split("\n");
+	qDebug() << list;
+
+	for ( int i = 0; i < list.length(); i++ )
+	{
+		bool ok;
+		int velocity = list.at(i).toInt(&ok);
+		if ( ok )
+		{
+			values.append(velocity);
+		}
+		else
+		{
+			qDebug() << "Skipping invalid number:" << list.at(i);
+		}
+	}
+
+	return values;
+}
+
 PowderTest::PowderTest ( QWidget *parent )
 	: QWidget(parent)
 {
@@ -307,7 +400,7 @@ PowderTest::PowderTest ( QWidget *parent )
 
 	QVBoxLayout *leftLayout = new QVBoxLayout();
 
-	QLabel *selectLabel = new QLabel("Select LabRadar or MagnetoSpeed\nto populate series data\n");
+	QLabel *selectLabel = new QLabel("Select chronograph type\nto populate series data\n");
 	selectLabel->setAlignment(Qt::AlignCenter);
 
 	QPushButton *lrDirButton = new QPushButton("Select LabRadar directory");
@@ -331,6 +424,13 @@ PowderTest::PowderTest ( QWidget *parent )
 	pcFileButton->setMinimumHeight(50);
 	pcFileButton->setMaximumHeight(50);
 
+	QPushButton *manualEntryButton = new QPushButton("Manual data entry");
+	connect(manualEntryButton, SIGNAL(clicked(bool)), this, SLOT(manualDataEntry(bool)));
+	manualEntryButton->setMinimumWidth(300);
+	manualEntryButton->setMaximumWidth(300);
+	manualEntryButton->setMinimumHeight(50);
+	manualEntryButton->setMaximumHeight(50);
+
 	QVBoxLayout *placeholderLayout = new QVBoxLayout();
 	placeholderLayout->addStretch(0);
 	placeholderLayout->addWidget(selectLabel);
@@ -341,6 +441,8 @@ PowderTest::PowderTest ( QWidget *parent )
 	placeholderLayout->setAlignment(msFileButton, Qt::AlignCenter);
 	placeholderLayout->addWidget(pcFileButton);
 	placeholderLayout->setAlignment(pcFileButton, Qt::AlignCenter);
+	placeholderLayout->addWidget(manualEntryButton);
+	placeholderLayout->setAlignment(manualEntryButton, Qt::AlignCenter);
 	placeholderLayout->addStretch(0);
 
 	QWidget *placeholderWidget = new QWidget();
@@ -517,7 +619,7 @@ void PowderTest::DisplaySeriesData ( void )
 	// Sort the list by series number
 	std::sort(seriesData.begin(), seriesData.end(), ChronoSeriesComparator);
 
-	// If we already have series data displayed, clear it out first. This call is a no-op if scrollArea is not already added to stackedWidget.
+	// If we already have series data displayed, clear it out first. This call is a no-op if scrollWidget is not already added to stackedWidget.
 	stackedWidget->removeWidget(scrollWidget);
 
 	QVBoxLayout *scrollLayout = new QVBoxLayout();
@@ -580,7 +682,7 @@ void PowderTest::DisplaySeriesData ( void )
 	seriesGrid->addWidget(headerName, 0, 1, Qt::AlignVCenter);
 	QLabel *headerChargeWeight = new QLabel("Charge Weight");
 	seriesGrid->addWidget(headerChargeWeight, 0, 2, Qt::AlignVCenter);
-	QLabel *headerResult = new QLabel("Series Result");
+	headerResult = new QLabel("Series Result");
 	seriesGrid->addWidget(headerResult, 0, 3, Qt::AlignVCenter);
 	QLabel *headerDate = new QLabel("Series Date");
 	seriesGrid->addWidget(headerDate, 0, 4, Qt::AlignVCenter);
@@ -592,7 +694,7 @@ void PowderTest::DisplaySeriesData ( void )
 		connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesCheckBoxChanged(int)));
 
 		seriesGrid->addWidget(series->enabled, i + 1, 0);
-		seriesGrid->addWidget(new QLabel(series->name), i + 1, 1, Qt::AlignVCenter);
+		seriesGrid->addWidget(series->name, i + 1, 1, Qt::AlignVCenter);
 
 		QHBoxLayout *chargeWeightLayout = new QHBoxLayout();
 		chargeWeightLayout->addWidget(series->chargeWeight);
@@ -617,6 +719,327 @@ void PowderTest::DisplaySeriesData ( void )
 	scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 	scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 	scrollArea->setWidgetResizable(true);
+}
+
+void PowderTest::addNewClicked ( bool state )
+{
+	qDebug() << "addNewClicked state =" << state;
+
+	// un-bold the button after the first click
+	addNewButton->setStyleSheet("");
+
+	int numRows = seriesGrid->rowCount();
+
+	// Remove the stretch from the last row, we'll be using the row for our new series
+	seriesGrid->setRowStretch(numRows - 1, 0);
+
+	qDebug() << "numRows =" << numRows;
+
+	ChronoSeries *series = new ChronoSeries();
+
+	series->deleted = false;
+
+	series->enabled = new QCheckBox();
+	series->enabled->setChecked(true);
+
+	connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesManualCheckBoxChanged(int)));
+	seriesGrid->addWidget(series->enabled, numRows - 1, 0);
+
+	int newSeriesNum = 1;
+	for ( int i = seriesData.size() - 1; i >= 0; i-- )
+	{
+		ChronoSeries *series = seriesData.at(i);
+		if ( ! series->deleted )
+		{
+			newSeriesNum = series->seriesNum + 1;
+			qDebug() << "Found last un-deleted series" << series->seriesNum << "(" << series->name->text() << ") at index" << i;
+			break;
+		}
+	}
+
+	series->seriesNum = newSeriesNum;
+
+	series->name = new QLabel(QString("Series %1").arg(newSeriesNum));
+	seriesGrid->addWidget(series->name, numRows - 1, 1);
+
+	series->chargeWeight = new QDoubleSpinBox();
+	series->chargeWeight->setDecimals(2);
+	series->chargeWeight->setSingleStep(0.1);
+	series->chargeWeight->setMinimumWidth(100);
+	series->chargeWeight->setMaximumWidth(100);
+	seriesGrid->addWidget(series->chargeWeight, numRows - 1, 2);
+
+	const char *velocityUnits2;
+	if ( velocityUnits->currentIndex() == FPS )
+	{
+		velocityUnits2 = "fps";
+	}
+	else
+	{
+		velocityUnits2 = "m/s";
+	}
+
+	series->result = new QLabel(QString("0 shots, 0-0 %1").arg(velocityUnits2));
+	seriesGrid->addWidget(series->result, numRows - 1, 3, Qt::AlignVCenter);
+
+	series->enterDataButton = new QPushButton("Enter velocity data");
+	connect(series->enterDataButton, SIGNAL(clicked(bool)), this, SLOT(enterDataClicked(bool)));
+	series->enterDataButton->setFixedSize(series->enterDataButton->minimumSizeHint());
+	seriesGrid->addWidget(series->enterDataButton, numRows - 1, 4, Qt::AlignLeft);
+
+	series->deleteButton = new QPushButton();
+	connect(series->deleteButton, SIGNAL(clicked(bool)), this, SLOT(deleteClicked(bool)));
+	series->deleteButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
+	series->deleteButton->setFixedSize(series->deleteButton->minimumSizeHint());
+	seriesGrid->addWidget(series->deleteButton, numRows - 1, 5, Qt::AlignLeft);
+
+	seriesData.append(series);
+
+	// Add an empty stretch row at the end for proper spacing
+	seriesGrid->setRowStretch(numRows, 1);
+}
+
+void PowderTest::enterDataClicked ( bool state )
+{
+	QPushButton *enterDataButton = qobject_cast<QPushButton *>(sender());
+
+	qDebug() << "enterDataClicked state =" << state;
+
+	// We have the button object, now locate its ChronoSeries object
+	ChronoSeries *series = NULL;
+	for ( int i = 0; i < seriesData.size(); i++ )
+	{
+		ChronoSeries *curSeries = seriesData.at(i);
+		if ( enterDataButton == curSeries->enterDataButton )
+		{
+			series = curSeries;
+			break;
+		}
+	}
+
+	EnterVelocitiesDialog *dialog = new EnterVelocitiesDialog(series);
+	int result = dialog->exec();
+
+	qDebug() << "dialog result:" << result;
+
+	if ( result )
+	{
+		qDebug() << "User OK'd dialog";
+
+		QList<int> values = dialog->getValues();
+
+		if ( values.size() == 0 )
+		{
+			qDebug() << "No valid velocities were provided, bailing...";
+			return;
+		}
+
+		// We have the button object, now locate its row in the grid
+		for ( int i = 0; i < seriesData.size(); i++ )
+		{
+			ChronoSeries *series = seriesData.at(i);
+			if ( enterDataButton == series->enterDataButton )
+			{
+				qDebug() << "Setting velocities for Series" << series->seriesNum;
+
+				series->muzzleVelocities = values;
+
+				const char *velocityUnits2;
+				if ( velocityUnits->currentIndex() == FPS )
+				{
+					velocityUnits2 = "fps";
+				}
+				else
+				{
+					velocityUnits2 = "m/s";
+				}
+
+				// Update the series result
+				int totalShots = series->muzzleVelocities.size();
+				int velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
+				int velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
+				series->result->setText(QString("%1 shot%2, %3-%4 %5").arg(totalShots).arg(totalShots > 1 ? "s" : "").arg(velocityMin).arg(velocityMax).arg(velocityUnits2));
+
+				break;
+			}
+		}
+	}
+	else
+	{
+		qDebug() << "User cancelled dialog";
+	}
+}
+
+void PowderTest::deleteClicked ( bool state )
+{
+	QPushButton *deleteButton = qobject_cast<QPushButton *>(sender());
+
+	qDebug() << "deleteClicked state =" << state;
+
+	int newSeriesNum = -1;
+
+	// We have the checkbox object, now locate its row in the grid
+	for ( int i = 0; i < seriesData.size(); i++ )
+	{
+		ChronoSeries *series = seriesData.at(i);
+		if ( deleteButton == series->deleteButton )
+		{
+			qDebug() << "Series" << series->seriesNum << "(" << series->name->text() << ") was deleted";
+
+			series->deleted = true;
+
+			series->enabled->hide();
+			series->name->hide();
+			series->chargeWeight->hide();
+			series->result->hide();
+			series->enterDataButton->hide();
+			series->deleteButton->hide();
+
+			newSeriesNum = series->seriesNum;
+		}
+		else if ( (! series->deleted) && newSeriesNum > 0 )
+		{
+			qDebug() << "Updating Series" << series->seriesNum << "to Series" << newSeriesNum;
+
+			series->seriesNum = newSeriesNum;
+			series->name->setText(QString("Series %1").arg(newSeriesNum));
+
+			newSeriesNum++;
+		}
+	}
+}
+
+void PowderTest::manualDataEntry ( bool state )
+{
+	qDebug() << "manualDataEntry state =" << state;
+
+	// If we already have series data displayed, clear it out first. This call is a no-op if scrollWidget is not already added to stackedWidget.
+	stackedWidget->removeWidget(scrollWidget);
+
+	QVBoxLayout *scrollLayout = new QVBoxLayout();
+
+	// Wrap grid in a widget to make the grid scrollable
+	QWidget *scrollAreaWidget = new QWidget();
+
+	seriesGrid = new QGridLayout(scrollAreaWidget);
+	seriesGrid->setColumnStretch(0, 0);
+	seriesGrid->setColumnStretch(1, 1);
+	seriesGrid->setColumnStretch(2, 2);
+	seriesGrid->setColumnStretch(3, 3);
+	seriesGrid->setColumnStretch(4, 3);
+	seriesGrid->setColumnStretch(5, 3);
+	seriesGrid->setHorizontalSpacing(25);
+
+	scrollArea = new QScrollArea();
+	scrollArea->setWidget(scrollAreaWidget);
+	scrollArea->setWidgetResizable(true);
+
+	scrollLayout->addWidget(scrollArea);
+
+	/* Create utilities toolbar under scroll area */
+
+	addNewButton = new QPushButton("Add new series");
+	addNewButton->setStyleSheet("font-weight: bold");
+	connect(addNewButton, SIGNAL(clicked(bool)), this, SLOT(addNewClicked(bool)));
+	addNewButton->setMinimumWidth(225);
+	addNewButton->setMaximumWidth(225);
+
+	QPushButton *loadNewButton = new QPushButton("Load new chronograph file");
+	connect(loadNewButton, SIGNAL(clicked(bool)), this, SLOT(loadNewChronographData(bool)));
+	loadNewButton->setMinimumWidth(225);
+	loadNewButton->setMaximumWidth(225);
+
+	QPushButton *autofillButton = new QPushButton("Auto-fill charge weights");
+	connect(autofillButton, SIGNAL(clicked(bool)), this, SLOT(autofillClicked(bool)));
+	autofillButton->setMinimumWidth(225);
+	autofillButton->setMaximumWidth(225);
+
+	QHBoxLayout *utilitiesLayout = new QHBoxLayout();
+	utilitiesLayout->addWidget(addNewButton);
+	utilitiesLayout->addWidget(loadNewButton);
+	utilitiesLayout->addWidget(autofillButton);
+
+	scrollLayout->addLayout(utilitiesLayout);
+
+	scrollWidget = new QWidget();
+	scrollWidget->setLayout(scrollLayout);
+
+	stackedWidget->addWidget(scrollWidget);
+	stackedWidget->setCurrentWidget(scrollWidget);
+
+	QCheckBox *headerCheckBox = new QCheckBox();
+	headerCheckBox->setChecked(true);
+	connect(headerCheckBox, SIGNAL(stateChanged(int)), this, SLOT(headerCheckBoxChanged(int)));
+	seriesGrid->addWidget(headerCheckBox, 0, 0);
+
+	QLabel *headerName = new QLabel("Series Name");
+	seriesGrid->addWidget(headerName, 0, 1, Qt::AlignVCenter);
+	QLabel *headerChargeWeight = new QLabel("Charge Weight");
+	seriesGrid->addWidget(headerChargeWeight, 0, 2, Qt::AlignVCenter);
+	headerResult = new QLabel("Series Result");
+	seriesGrid->addWidget(headerResult, 0, 3, Qt::AlignVCenter);
+	QLabel *headerEnterData = new QLabel("");
+	seriesGrid->addWidget(headerEnterData, 0, 4, Qt::AlignVCenter);
+	QLabel *headerDelete = new QLabel("");
+	seriesGrid->addWidget(headerDelete, 0, 5, Qt::AlignVCenter);
+
+	// Only connect this signal for manual data entry
+	connect(velocityUnits, SIGNAL(activated(int)), this, SLOT(velocityUnitsChanged(int)));
+
+	/* Create initial row */
+
+	ChronoSeries *series = new ChronoSeries();
+
+	series->deleted = false;
+
+	series->enabled = new QCheckBox();
+	series->enabled->setChecked(true);
+
+	connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesManualCheckBoxChanged(int)));
+	seriesGrid->addWidget(series->enabled, 1, 0);
+
+	series->seriesNum = 1;
+
+	series->name = new QLabel("Series 1");
+	seriesGrid->addWidget(series->name, 1, 1);
+
+	series->chargeWeight = new QDoubleSpinBox();
+	series->chargeWeight->setDecimals(2);
+	series->chargeWeight->setSingleStep(0.1);
+	series->chargeWeight->setMinimumWidth(100);
+	series->chargeWeight->setMaximumWidth(100);
+	seriesGrid->addWidget(series->chargeWeight, 1, 2);
+
+	const char *velocityUnits2;
+	if ( velocityUnits->currentIndex() == FPS )
+	{
+		velocityUnits2 = "fps";
+	}
+	else
+	{
+		velocityUnits2 = "m/s";
+	}
+
+	series->result = new QLabel(QString("0 shots, 0-0 %1").arg(velocityUnits2));
+	seriesGrid->addWidget(series->result, 1, 3, Qt::AlignVCenter);
+
+	series->enterDataButton = new QPushButton("Enter velocity data");
+	connect(series->enterDataButton, SIGNAL(clicked(bool)), this, SLOT(enterDataClicked(bool)));
+	series->enterDataButton->setFixedSize(series->enterDataButton->minimumSizeHint());
+	seriesGrid->addWidget(series->enterDataButton, 1, 4, Qt::AlignLeft);
+
+	series->deleteButton = new QPushButton();
+	connect(series->deleteButton, SIGNAL(clicked(bool)), this, SLOT(deleteClicked(bool)));
+	series->deleteButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
+	series->deleteButton->setFixedSize(series->deleteButton->minimumSizeHint());
+	seriesGrid->addWidget(series->deleteButton, 1, 5, Qt::AlignLeft);
+
+	seriesGrid->setRowMinimumHeight(0, series->chargeWeight->sizeHint().height());
+
+	seriesData.append(series);
+
+	// Add an empty stretch row at the end for proper spacing
+	seriesGrid->setRowStretch(seriesGrid->rowCount(), 1);
 }
 
 void PowderTest::showGraph ( bool state )
@@ -952,16 +1375,27 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 	for ( int i = 0; i < seriesData.size(); i++ )
 	{
 		ChronoSeries *series = seriesData.at(i);
-		if ( series->enabled->isChecked() )
+		if ( (! series->deleted) && series->enabled->isChecked() )
 		{
 			numEnabled += 1;
 			if ( series->chargeWeight->value() == 0 )
 			{
-				qDebug() << series->name << "is missing charge weight, bailing";
+				qDebug() << series->name->text() << "is missing charge weight, bailing";
 
 				QMessageBox *msg = new QMessageBox();
 				msg->setIcon(QMessageBox::Critical);
-				msg->setText(QString("'%1' is missing charge weight!").arg(series->name));
+				msg->setText(QString("'%1' is missing charge weight!").arg(series->name->text()));
+				msg->setWindowTitle("Error");
+				msg->exec();
+				return;
+			}
+			else if ( series->muzzleVelocities.size() == 0 )
+			{
+				qDebug() << series->name->text() << "is missing velocities, bailing";
+
+				QMessageBox *msg = new QMessageBox();
+				msg->setIcon(QMessageBox::Critical);
+				msg->setText(QString("'%1' is missing velocities!").arg(series->name->text()));
 				msg->setWindowTitle("Error");
 				msg->exec();
 				return;
@@ -993,7 +1427,7 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 	{
 		ChronoSeries *series = seriesData.at(i);
 
-		if ( series->enabled->isChecked() )
+		if ( (! series->deleted) && series->enabled->isChecked() )
 		{
 			seriesToGraph.append(series);
 		}
@@ -1488,12 +1922,13 @@ void PowderTest::seriesCheckBoxChanged ( int state )
 {
 	QCheckBox *checkBox = qobject_cast<QCheckBox *>(sender());
 
-	qDebug() << "seriesCheckBoxChanged state =" << state;
+	qDebug() << "seriesCheckBoxChanged state =" << state << " checkBox =" << checkBox;
 
 	// We have the checkbox object, now locate its row in the grid
 	for ( int i = 0; i < seriesGrid->rowCount() - 1; i++ )
 	{
 		QWidget *rowCheckBox = seriesGrid->itemAtPosition(i, 0)->widget();
+
 		if ( checkBox == rowCheckBox )
 		{
 			QWidget *seriesName = seriesGrid->itemAtPosition(i, 1)->widget();
@@ -1508,7 +1943,7 @@ void PowderTest::seriesCheckBoxChanged ( int state )
 				seriesName->setStyleSheet("");
 				chargeWeight->setEnabled(true);
 				seriesResult->setStyleSheet("");
-				seriesDate->setStyleSheet("");
+				seriesDate->setEnabled(true);
 			}
 			else
 			{
@@ -1517,7 +1952,52 @@ void PowderTest::seriesCheckBoxChanged ( int state )
 				seriesName->setStyleSheet("color: #878787");
 				chargeWeight->setEnabled(false);
 				seriesResult->setStyleSheet("color: #878787");
-				seriesDate->setStyleSheet("color: #878787");
+				seriesDate->setEnabled(false);
+			}
+
+			return;
+		}
+	}
+}
+
+void PowderTest::seriesManualCheckBoxChanged ( int state )
+{
+	QCheckBox *checkBox = qobject_cast<QCheckBox *>(sender());
+
+	qDebug() << "seriesManualCheckBoxChanged state =" << state << " checkBox =" << checkBox;
+
+	// We have the checkbox object, now locate its row in the grid
+	for ( int i = 0; i < seriesGrid->rowCount() - 1; i++ )
+	{
+		QWidget *rowCheckBox = seriesGrid->itemAtPosition(i, 0)->widget();
+
+		if ( checkBox == rowCheckBox )
+		{
+			QWidget *seriesName = seriesGrid->itemAtPosition(i, 1)->widget();
+			QWidget *chargeWeight = seriesGrid->itemAtPosition(i, 2)->widget();
+			QWidget *seriesResult = seriesGrid->itemAtPosition(i, 3)->widget();
+			QWidget *seriesEnterData = seriesGrid->itemAtPosition(i, 4)->widget();
+			QWidget *seriesDelete = seriesGrid->itemAtPosition(i, 5)->widget();
+
+			if ( checkBox->isChecked() )
+			{
+				qDebug() << "Grid row" << i << "was checked";
+
+				seriesName->setStyleSheet("");
+				chargeWeight->setEnabled(true);
+				seriesResult->setStyleSheet("");
+				seriesEnterData->setEnabled(true);
+				seriesDelete->setEnabled(true);
+			}
+			else
+			{
+				qDebug() << "Grid row" << i << "was unchecked";
+
+				seriesName->setStyleSheet("color: #878787");
+				chargeWeight->setEnabled(false);
+				seriesResult->setStyleSheet("color: #878787");
+				seriesEnterData->setEnabled(false);
+				seriesDelete->setEnabled(false);
 			}
 
 			return;
@@ -1547,6 +2027,48 @@ void PowderTest::headerCheckBoxChanged ( int state )
 		{
 			QCheckBox *checkBox = qobject_cast<QCheckBox *>(seriesGrid->itemAtPosition(i, 0)->widget());
 			checkBox->setChecked(false);
+		}
+	}
+}
+
+void PowderTest::velocityUnitsChanged ( int index )
+{
+	qDebug() << "velocityUnitsChanged index =" << index;
+
+	/*
+	 * This signal handler is only connected in manual data entry mode. When the velocity unit is changed, we
+	 * need to iterate through and update every Series Result row to display the new unit.
+	 */
+
+	const char *velocityUnit;
+
+	if ( index == FPS )
+	{
+		velocityUnit = "fps";
+	}
+	else
+	{
+		velocityUnit = "m/s";
+	}
+
+	for ( int i = 0; i < seriesData.size(); i++ )
+	{
+		ChronoSeries *series = seriesData.at(i);
+		if ( ! series->deleted )
+		{
+			qDebug() << "Setting series" << i << "velocity unit to" << velocityUnit;
+
+			if ( series->muzzleVelocities.size() == 0 )
+			{
+				series->result->setText(QString("0 shots, 0-0 %1").arg(velocityUnit));
+			}
+			else
+			{
+				int totalShots = series->muzzleVelocities.size();
+				int velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
+				int velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
+				series->result->setText(QString("%1 shot%2, %3-%4 %5").arg(totalShots).arg(totalShots > 1 ? "s" : "").arg(velocityMin).arg(velocityMax).arg(velocityUnit));
+			}
 		}
 	}
 }
@@ -1613,8 +2135,14 @@ void PowderTest::loadNewChronographData ( bool state )
 	{
 		qDebug() << "User said yes";
 
-		// Remove the current chronograph data. This returns to the initial screen to choose a new chronograph file.
+		// Hide the chronograph data screen. This returns to the initial screen to choose a new chronograph file.
 		stackedWidget->removeWidget(scrollWidget);
+
+		// Delete the loaded chronograph data
+		seriesData.clear();
+
+		// Disconnect the velocity units header signal (used in manual data entry), if necessary
+		disconnect(velocityUnits, SIGNAL(activated(int)), this, SLOT(velocityUnitsChanged(int)));
 	}
 	else
 	{
@@ -1703,7 +2231,7 @@ void PowderTest::selectLabRadarDirectory ( bool state )
 			series->enabled = new QCheckBox();
 			series->enabled->setChecked(true);
 
-			series->name = fileName;
+			series->name = new QLabel(fileName);
 
 			series->chargeWeight = new QDoubleSpinBox();
 			series->chargeWeight->setDecimals(2);
@@ -1748,6 +2276,7 @@ ChronoSeries *PowderTest::ExtractLabRadarSeries ( QTextStream &csv )
 {
 	ChronoSeries *series = new ChronoSeries();
 	series->isValid = false;
+	series->deleted = false;
 	series->seriesNum = -1;
 
 	while ( ! csv.atEnd() )
@@ -1900,6 +2429,7 @@ QList<ChronoSeries *> PowderTest::ExtractMagnetoSpeedSeries ( QTextStream &csv )
 	QList<ChronoSeries *> allSeries;
 	ChronoSeries *curSeries = new ChronoSeries();
 	curSeries->isValid = false;
+	curSeries->deleted = false;
 	curSeries->seriesNum = -1;
 
 	int i = 0;
@@ -1951,12 +2481,13 @@ QList<ChronoSeries *> PowderTest::ExtractMagnetoSpeedSeries ( QTextStream &csv )
 
 				curSeries = new ChronoSeries();
 				curSeries->isValid = false;
+				curSeries->deleted = false;
 				curSeries->seriesNum = -1;
 			}
 			else if ( (rows.at(0).compare("Series") == 0) && (rows.at(2) == "Shots:") )
 			{
 				curSeries->seriesNum = rows.at(1).toInt();
-				curSeries->name = QString("Series %1").arg(rows.at(1).toInt());
+				curSeries->name = new QLabel(QString("Series %1").arg(rows.at(1).toInt()));
 				qDebug() << "seriesNum =" << curSeries->seriesNum;
 			}
 			else
@@ -2071,6 +2602,7 @@ QList<ChronoSeries *> PowderTest::ExtractProChronoSeries ( QTextStream &csv )
 	QList<ChronoSeries *> allSeries;
 	ChronoSeries *curSeries = new ChronoSeries();
 	curSeries->isValid = false;
+	curSeries->deleted = false;
 	curSeries->seriesNum = -1;
 
 	int i = 0;
@@ -2136,7 +2668,7 @@ QList<ChronoSeries *> PowderTest::ExtractProChronoSeries ( QTextStream &csv )
 						curSeries = new ChronoSeries();
 						curSeries->isValid = true;
 						curSeries->seriesNum = -1;
-						curSeries->name = rows.at(0);
+						curSeries->name = new QLabel(rows.at(0));
 						curSeries->velocityUnits = "ft/s";
 					}
 
@@ -2226,7 +2758,7 @@ void PowderTest::rrClicked ( bool state )
 
 			newSeries->seriesNum = i;
 
-			newSeries->name = QString("Series %1").arg(i + 1);
+			newSeries->name = new QLabel(QString("Series %1").arg(i + 1));
 
 			newSeries->muzzleVelocities = newVelocs;
 
@@ -2274,7 +2806,7 @@ void PowderTest::autofillClicked ( bool state )
 		for ( int i = 0; i < seriesData.size(); i++ )
 		{
 			ChronoSeries *series = seriesData.at(i);
-			if ( series->enabled->isChecked() )
+			if ( (! series->deleted) && series->enabled->isChecked() )
 			{
 				qDebug() << "Setting series" << i << "to" << currentCharge;
 				series->chargeWeight->setValue(currentCharge);

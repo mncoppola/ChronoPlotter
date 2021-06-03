@@ -64,13 +64,17 @@ struct ChronoSeries
 {
 	bool isValid;
 	int seriesNum;
-	QString name;
+	QLabel *name;
 	QList<int> muzzleVelocities;
 	QString velocityUnits;
+	QLabel *result;
 	QString firstDate;
 	QString firstTime;
 	QDoubleSpinBox *chargeWeight;
+	QPushButton *enterDataButton;
+	QPushButton *deleteButton;
 	QCheckBox *enabled;
+	bool deleted;
 };
 
 class QHLine : public QFrame
@@ -190,10 +194,16 @@ class PowderTest : public QWidget
 		void selectLabRadarDirectory(bool);
 		void selectMagnetoSpeedFile(bool);
 		void selectProChronoFile(bool);
+		void manualDataEntry(bool);
 		void rrClicked(bool);
+		void addNewClicked(bool);
+		void enterDataClicked(bool);
+		void deleteClicked(bool);
 		void autofillClicked(bool);
+		void velocityUnitsChanged(int);
 		void headerCheckBoxChanged(int);
-		void seriesCheckBoxChanged ( int );
+		void seriesCheckBoxChanged(int);
+		void seriesManualCheckBoxChanged(int);
 		void showGraph(bool);
 		void saveGraph(bool);
 
@@ -215,6 +225,7 @@ class PowderTest : public QWidget
 		QWidget *scrollWidget;
 		QScrollArea *scrollArea;
 		QGridLayout *seriesGrid;
+		QLabel *headerResult;
 		QLineEdit *graphTitle;
 		QLineEdit *rifle;
 		QLineEdit *projectile;
@@ -222,6 +233,7 @@ class PowderTest : public QWidget
 		QLineEdit *brass;
 		QLineEdit *primer;
 		QLineEdit *weather;
+		QPushButton *addNewButton;
 		QComboBox *graphType;
 		QComboBox *velocityUnits;
 		QCheckBox *esCheckBox;
@@ -248,6 +260,23 @@ class RoundRobinDialog : public QDialog
 	public:
 		RoundRobinDialog(PowderTest *, QDialog *parent = 0);
 		~RoundRobinDialog() {};
+};
+
+class EnterVelocitiesDialog : public QDialog
+{
+	Q_OBJECT
+
+	public:
+		EnterVelocitiesDialog(ChronoSeries *, QDialog *parent = 0);
+		~EnterVelocitiesDialog() {};
+		QList<int> getValues();
+
+	public slots:
+		void textChanged();
+
+	private:
+		QLabel *velocitiesEntered;
+		QTextEdit *textEdit;
 };
 
 struct AutofillValues
