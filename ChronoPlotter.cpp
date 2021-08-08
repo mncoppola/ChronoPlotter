@@ -28,8 +28,11 @@
 #include <QDialogButtonBox>
 #include <QDialog>
 #include <QByteArray>
+#include <QJsonDocument>
 #include "qcustomplot/qcustomplot.h"
 
+#include "miniz.c"
+#include "untar.h"
 #include "ChronoPlotter.h"
 
 int scaleFontSize ( int size )
@@ -767,7 +770,11 @@ void PowderTest::addNewClicked ( bool state )
 	series->chargeWeight->setSingleStep(0.1);
 	series->chargeWeight->setMinimumWidth(100);
 	series->chargeWeight->setMaximumWidth(100);
-	seriesGrid->addWidget(series->chargeWeight, numRows - 1, 2);
+
+	QHBoxLayout *chargeWeightLayout = new QHBoxLayout();
+	chargeWeightLayout->addWidget(series->chargeWeight);
+	chargeWeightLayout->addStretch(0);
+	seriesGrid->addLayout(chargeWeightLayout, numRows - 1, 2);
 
 	const char *velocityUnits2;
 	if ( velocityUnits->currentIndex() == FPS )
@@ -1008,7 +1015,11 @@ void PowderTest::manualDataEntry ( bool state )
 	series->chargeWeight->setSingleStep(0.1);
 	series->chargeWeight->setMinimumWidth(100);
 	series->chargeWeight->setMaximumWidth(100);
-	seriesGrid->addWidget(series->chargeWeight, 1, 2);
+
+	QHBoxLayout *chargeWeightLayout = new QHBoxLayout();
+	chargeWeightLayout->addWidget(series->chargeWeight);
+	chargeWeightLayout->addStretch(0);
+	seriesGrid->addLayout(chargeWeightLayout, 1, 2);
 
 	const char *velocityUnits2;
 	if ( velocityUnits->currentIndex() == FPS )
@@ -1940,18 +1951,18 @@ void PowderTest::seriesCheckBoxChanged ( int state )
 			{
 				qDebug() << "Grid row" << i << "was checked";
 
-				seriesName->setStyleSheet("");
+				seriesName->setEnabled(true);
 				chargeWeight->setEnabled(true);
-				seriesResult->setStyleSheet("");
+				seriesResult->setEnabled(true);
 				seriesDate->setEnabled(true);
 			}
 			else
 			{
 				qDebug() << "Grid row" << i << "was unchecked";
 
-				seriesName->setStyleSheet("color: #878787");
+				seriesName->setEnabled(false);
 				chargeWeight->setEnabled(false);
-				seriesResult->setStyleSheet("color: #878787");
+				seriesResult->setEnabled(false);
 				seriesDate->setEnabled(false);
 			}
 
@@ -1974,7 +1985,7 @@ void PowderTest::seriesManualCheckBoxChanged ( int state )
 		if ( checkBox == rowCheckBox )
 		{
 			QWidget *seriesName = seriesGrid->itemAtPosition(i, 1)->widget();
-			QWidget *chargeWeight = seriesGrid->itemAtPosition(i, 2)->widget();
+			QWidget *chargeWeight = seriesGrid->itemAtPosition(i, 2)->layout()->itemAt(0)->widget();
 			QWidget *seriesResult = seriesGrid->itemAtPosition(i, 3)->widget();
 			QWidget *seriesEnterData = seriesGrid->itemAtPosition(i, 4)->widget();
 			QWidget *seriesDelete = seriesGrid->itemAtPosition(i, 5)->widget();
@@ -1983,9 +1994,9 @@ void PowderTest::seriesManualCheckBoxChanged ( int state )
 			{
 				qDebug() << "Grid row" << i << "was checked";
 
-				seriesName->setStyleSheet("");
+				seriesName->setEnabled(true);
 				chargeWeight->setEnabled(true);
-				seriesResult->setStyleSheet("");
+				seriesResult->setEnabled(true);
 				seriesEnterData->setEnabled(true);
 				seriesDelete->setEnabled(true);
 			}
@@ -1993,9 +2004,9 @@ void PowderTest::seriesManualCheckBoxChanged ( int state )
 			{
 				qDebug() << "Grid row" << i << "was unchecked";
 
-				seriesName->setStyleSheet("color: #878787");
+				seriesName->setEnabled(false);
 				chargeWeight->setEnabled(false);
-				seriesResult->setStyleSheet("color: #878787");
+				seriesResult->setEnabled(false);
 				seriesEnterData->setEnabled(false);
 				seriesDelete->setEnabled(false);
 			}
@@ -2021,7 +2032,7 @@ void PowderTest::headerCheckBoxChanged ( int state )
 	}
 	else
 	{
-		qDebug() << "Header checkbox was checked";
+		qDebug() << "Header checkbox was unchecked";
 
 		for ( int i = 0; i < seriesGrid->rowCount() - 1; i++ )
 		{
@@ -2426,6 +2437,9 @@ void PowderTest::selectMagnetoSpeedFile ( bool state )
 
 QList<ChronoSeries *> PowderTest::ExtractMagnetoSpeedSeries ( QTextStream &csv )
 {
+	// MagnetoSpeed XFR app exports .CSV files in a slightly different format
+	bool xfr_export = false;
+
 	QList<ChronoSeries *> allSeries;
 	ChronoSeries *curSeries = new ChronoSeries();
 	curSeries->isValid = false;
@@ -2457,7 +2471,7 @@ QList<ChronoSeries *> PowderTest::ExtractMagnetoSpeedSeries ( QTextStream &csv )
 				bool useSeries = true;
 
 				// Ensure we have a valid MagnetoSpeed series
-				if ( (curSeries->seriesNum == -1) || curSeries->velocityUnits.isNull() )
+				if ( ((! xfr_export) && (curSeries->seriesNum == -1)) || curSeries->velocityUnits.isNull() )
 				{
 					qDebug() << "Series does not have all expected fields set, skipping series.";
 					useSeries = false;
@@ -2484,33 +2498,98 @@ QList<ChronoSeries *> PowderTest::ExtractMagnetoSpeedSeries ( QTextStream &csv )
 				curSeries->deleted = false;
 				curSeries->seriesNum = -1;
 			}
+			else if ( rows.at(0).compare("Synced on:") == 0 )
+			{
+				// .CSV file is exported from the MagnetoSpeed XFR app
+				xfr_export = true;
+
+				QStringList dateTime = rows.at(1).split(" ");
+				if ( dateTime.size() == 2 )
+				{
+					curSeries->firstDate = dateTime.at(0);
+					curSeries->firstTime = dateTime.at(1);
+					qDebug() << "firstDate =" << curSeries->firstDate;
+					qDebug() << "firstTime =" << curSeries->firstTime;
+				}
+				else
+				{
+					qDebug() << "Failed to split datetime cell:" << rows.at(1);
+				}
+			}
 			else if ( (rows.at(0).compare("Series") == 0) && (rows.at(2) == "Shots:") )
 			{
-				curSeries->seriesNum = rows.at(1).toInt();
-				curSeries->name = new QLabel(QString("Series %1").arg(rows.at(1).toInt()));
-				qDebug() << "seriesNum =" << curSeries->seriesNum;
+				bool ok;
+				int seriesNum = rows.at(1).toInt(&ok);
+				if ( ok )
+				{
+					// MagnetoSpeed V3 files contain an integer in the 'Series' field. Use it as the series name.
+					curSeries->seriesNum = seriesNum;
+					curSeries->name = new QLabel(QString("Series %1").arg(seriesNum));
+					qDebug() << "seriesNum =" << curSeries->seriesNum;
+				}
+				else
+				{
+					// XFR export files contain a date in the 'Series' field. Ignore it since we're expecting to be replaced by the name in the 'Notes' field.
+					qDebug() << "XFR file detected, skipping Series row";
+				}
+			}
+			else if ( rows.at(0).compare("Notes") == 0 )
+			{
+				// Use the series name if the user entered one
+				if ( rows.at(1).compare("") == 0 )
+				{
+					curSeries->name = new QLabel("Unnamed");
+				}
+				else
+				{
+					curSeries->name = new QLabel(rows.at(1));
+				}
+
+				qDebug() << "Setting name to '" << curSeries->name << "' via Notes field";
 			}
 			else
 			{
 				bool ok = false;
 
-				// If cell is a valid integer, it's a velocity value
+				// If the first cell is a valid integer, it's a velocity entry
 				rows.at(0).toInt(&ok);
 				if ( ok )
 				{
-					curSeries->muzzleVelocities.append(rows.at(2).toInt());
-					qDebug() << "muzzleVelocities +=" << rows.at(2).toInt();
-
-					if ( curSeries->muzzleVelocities.size() == 1 )
+					if ( xfr_export )
 					{
-						curSeries->velocityUnits = rows.at(3);
-						qDebug() << "velocityUnits =" << curSeries->velocityUnits;
+						curSeries->muzzleVelocities.append(rows.at(1).toInt());
+						qDebug() << "muzzleVelocities +=" << rows.at(1).toInt();
+
+						if ( curSeries->muzzleVelocities.size() == 1 )
+						{
+							curSeries->velocityUnits = rows.at(2);
+							qDebug() << "velocityUnits =" << curSeries->velocityUnits;
+						}
+					}
+					else
+					{
+						curSeries->muzzleVelocities.append(rows.at(2).toInt());
+						qDebug() << "muzzleVelocities +=" << rows.at(2).toInt();
+
+						if ( curSeries->muzzleVelocities.size() == 1 )
+						{
+							curSeries->velocityUnits = rows.at(3);
+							qDebug() << "velocityUnits =" << curSeries->velocityUnits;
+						}
 					}
 				}
 			}
 		}
 
 		i++;
+	}
+
+	// XFR export files do not include series numbers, so iterate through and set the seriesNum's
+	for ( i = 0; i < allSeries.size(); i++ )
+	{
+		ChronoSeries *series = allSeries.at(i);
+		series->seriesNum = i + 1;
+		qDebug() << "Setting" << series->name << "to" << series->seriesNum;
 	}
 
 	return allSeries;
@@ -2601,9 +2680,17 @@ QList<ChronoSeries *> PowderTest::ExtractProChronoSeries ( QTextStream &csv )
 {
 	QList<ChronoSeries *> allSeries;
 	ChronoSeries *curSeries = new ChronoSeries();
-	curSeries->isValid = false;
+	curSeries->isValid = true;
 	curSeries->deleted = false;
 	curSeries->seriesNum = -1;
+	curSeries->velocityUnits = "ft/s";
+
+	/*
+	 * ProChrono has two CSV formats, their legacy Digital USB format and a newer one exported by their Digital Link app:
+	 *  - A Digital USB .CSV file contains only column headers followed by shot entries for one or more series.
+	 *  - A Digital Link .CSV file contains multiple series and precedes each series with a header containing name/stats.
+	 * We parse both in one below, for simplicity's sake for the user.
+	 */
 
 	int i = 0;
 	while ( ! csv.atEnd() )
@@ -2623,21 +2710,18 @@ QList<ChronoSeries *> PowderTest::ExtractProChronoSeries ( QTextStream &csv )
 
 		qDebug() << "Line" << i << ":" << rows;
 
-		// Validate the first row header
-		if ( i == 0 )
-		{
-			if ( (rows.size() >= 9) && (rows.at(0) == "Shot List") && (rows.at(1) == "Index") && (rows.at(2) == "Velocity") )
-			{
-				qDebug() << "Found the ProChrono header";
-			}
-			else
-			{
-				qDebug() << "File doesn't have the ProChrono header, bailing";
-				return allSeries;
-			}
-		}
+		/*
+		 * We can actually largely ignore the series name/stats headers in the Digital Link CSV. The only field we'd care
+		 * about in the header is the series name, but the name is repeated in each shot entry row.
+		 *
+		 * To parse:
+		 *  - If rows.size() >= 9 and row is not column headers, parse it as a shot entry.
+		 *  - If cell 1 of the shot entry row contains (index) 1, create a new series with the name in cell 0.
+		 *
+		 * And that's it. It should get both file formats.
+		 */
 
-		if ( rows.size() >= 3 )
+		if ( rows.size() >= 9 )
 		{
 			if ( rows.at(0) == "Shot List" )
 			{
@@ -2654,7 +2738,7 @@ QList<ChronoSeries *> PowderTest::ExtractProChronoSeries ( QTextStream &csv )
 				{
 					if ( index == 1 )
 					{
-						 // First shot in the series. End the previous series (if necessary) and start a new one.
+						// First shot in the series. End the previous series (if necessary) and start a new one.
 
 						if ( curSeries->muzzleVelocities.size() > 0 )
 						{
@@ -2667,12 +2751,13 @@ QList<ChronoSeries *> PowderTest::ExtractProChronoSeries ( QTextStream &csv )
 
 						curSeries = new ChronoSeries();
 						curSeries->isValid = true;
+						curSeries->deleted = false;
 						curSeries->seriesNum = -1;
 						curSeries->name = new QLabel(rows.at(0));
 						curSeries->velocityUnits = "ft/s";
 					}
 
-					if ( curSeries->firstDate.isNull() && (rows.size() >= 9) )
+					if ( curSeries->firstDate.isNull() )
 					{
 						QStringList dateTime = rows.at(8).split(" ");
 						if ( dateTime.size() == 2 )
@@ -2693,8 +2778,6 @@ QList<ChronoSeries *> PowderTest::ExtractProChronoSeries ( QTextStream &csv )
 				}
 			}
 		}
-
-		i++;
 	}
 
 	// End of the file. Finish parsing the current series.
@@ -2827,6 +2910,591 @@ void PowderTest::autofillClicked ( bool state )
 	}
 }
 
+double SeatingDepthTest::calculateES ( QList<QPair<double, double> > coordinates )
+{
+	/*
+	 * There's probably a smarter/more efficient way to calculate this, but you'll
+	 * burn your barrel out before the algorithmic complexity becomes an issue.
+	 */
+
+	double extremeSpread = 0;
+
+	int i;
+	for ( i = 0; i < coordinates.size(); i++ )
+	{
+		QPair<double, double> coord1 = coordinates.at(i);
+		//qDebug() << "Iter" << i;
+
+		int j;
+		for ( j = i + 1; j < coordinates.size(); j++ )
+		{
+			QPair<double, double> coord2 = coordinates.at(j);
+			double es = sqrt( pow((coord2.first - coord1.first), 2) + pow(coord2.second - coord1.second, 2) );
+
+			//qDebug() << "Calculated ES =" << es << "for coords" << coord1 << coord2;
+
+			if ( es > extremeSpread )
+			{
+				extremeSpread = es;
+				//qDebug() << "Updated ES to" << extremeSpread;
+			}
+		}
+	}
+
+	return extremeSpread;
+}
+
+double sampleStdev ( QList<double> vals )
+{
+	int totalShots = vals.size();
+	double mean = std::accumulate(vals.begin(), vals.end(), 0LL) / static_cast<double>(totalShots);
+
+	double temp = 0;
+	for ( int i = 0; i < totalShots; i++ )
+	{
+		double val = vals.at(i);
+		temp += pow(val - mean, 2);
+	}
+
+	// subtract 1 in denominator for sample variance
+	return std::sqrt(temp / (totalShots - 1));
+}
+
+double SeatingDepthTest::calculateXStdev ( QList<QPair<double, double> > coordinates )
+{
+	QList<double> xCoords;
+	for ( int i = 0; i < coordinates.size(); i++ )
+	{
+		xCoords.append(coordinates.at(i).first);
+	}
+
+	return sampleStdev(xCoords);
+}
+
+double SeatingDepthTest::calculateYStdev ( QList<QPair<double, double> > coordinates )
+{
+	QList<double> yCoords;
+	for ( int i = 0; i < coordinates.size(); i++ )
+	{
+		yCoords.append(coordinates.at(i).second);
+	}
+
+	return sampleStdev(yCoords);
+}
+
+double SeatingDepthTest::calculateRSD ( QList<QPair<double, double> > coordinates )
+{
+	QList<double> xCoords;
+	QList<double> yCoords;
+	for ( int i = 0; i < coordinates.size(); i++ )
+	{
+		xCoords.append(coordinates.at(i).first);
+		yCoords.append(coordinates.at(i).second);
+	}
+
+	double radialStdev = sqrt( pow(sampleStdev(xCoords), 2) + pow(sampleStdev(yCoords), 2) );
+
+	return radialStdev;
+}
+
+double SeatingDepthTest::pairSumX ( double lhs, const QPair<double, double> rhs )
+{
+	return lhs + rhs.first;
+}
+
+double SeatingDepthTest::pairSumY ( double lhs, const QPair<double, double> rhs )
+{
+	return lhs + rhs.second;
+}
+
+double SeatingDepthTest::calculateMR ( QList<QPair<double, double> > coordinates )
+{
+	double meanRadius = 0;
+
+	int totalShots = coordinates.size();
+	double xMean = std::accumulate(coordinates.begin(), coordinates.end(), 0.0, pairSumX) / static_cast<double>(totalShots);
+	double yMean = std::accumulate(coordinates.begin(), coordinates.end(), 0.0, pairSumY) / static_cast<double>(totalShots);
+
+	QList<double> r;
+	int i;
+	for ( i = 0; i < coordinates.size(); i++ )
+	{
+		r.append(sqrt( pow((coordinates.at(i).first - xMean), 2) + pow((coordinates.at(i).second - yMean), 2) ));
+	}
+
+	meanRadius = std::accumulate(r.begin(), r.end(), 0.0) / static_cast<double>(totalShots);
+
+	return meanRadius;
+}
+
+void SeatingDepthTest::selectShotMarkerFile ( bool state )
+{
+	qDebug() << "selectShotMarkerFile state =" << state;
+
+	qDebug() << "Previous directory:" << prevShotMarkerDir;
+
+	QString path = QFileDialog::getOpenFileName(this, "Select file", prevShotMarkerDir, "ShotMarker files (*.csv *.tar)");
+	prevShotMarkerDir = path;
+
+	qDebug() << "Selected file:" << path;
+
+	if ( path.isEmpty() )
+	{
+		qDebug() << "User didn't select a file, bail";
+		return;
+	}
+
+	seatingSeriesData.clear();
+
+	/*
+	 * ShotMarker records all of its series data in a single .CSV file
+	 */
+
+	QList<SeatingSeries *> allSeries;
+
+	if ( path.endsWith(".tar") )
+	{
+		qDebug() << "ShotMarker .tar bundle";
+
+		allSeries = ExtractShotMarkerSeriesTar(path);
+	}
+	else
+	{
+		qDebug() << "ShotMarker .csv export";
+
+		QFile csvFile(path);
+		csvFile.open(QIODevice::ReadOnly);
+		QTextStream csv(&csvFile);
+
+		allSeries = ExtractShotMarkerSeriesCsv(csv);
+
+		csvFile.close();
+	}
+
+	qDebug() << "Got allSeries with size" << allSeries.size();
+
+	if ( ! allSeries.empty() )
+	{
+		qDebug() << "Detected ShotMarker file";
+
+		for ( int i = 0; i < allSeries.size(); i++ )
+		{
+			SeatingSeries *series = allSeries.at(i);
+
+			series->enabled = new QCheckBox();
+			series->enabled->setChecked(true);
+
+			series->cartridgeLength = new QDoubleSpinBox();
+			series->cartridgeLength->setDecimals(3);
+			series->cartridgeLength->setSingleStep(0.001);
+			series->cartridgeLength->setMinimumWidth(100);
+			series->cartridgeLength->setMaximumWidth(100);
+
+			/*
+			 * ShotMarker internally records shot coordinates in millimeters (at least it appears to, from studying its file formats). String
+			 * export files (tar/JSON) record coordinates in mm with one decimal place. System export files (CSV) contain mm, inches, MOA, and
+			 * mils, but for some reason round mm to whole integers. Inches are the most precise measurement available in CSV files, but are
+			 * rounded to two decimal places as well. This means group size calculations may be slightly different for the same string between
+			 * .tar and .CSV files, since we're going to use highest precision values when they're available.
+			 *
+			 * We'd like to provide the user the ability to graph all group size calculations (ES, RSD, MR, etc.) with all units. The simplest
+			 * way is to just perform every calculation upfront and save the results. This saves a ton of complexity (and opportunity for bugs),
+			 * and the performance hit is pretty negligible.
+			 *
+			 * Iterate through each unit and perform each group size calculation, starting from inches. The results are then stored in QLists,
+			 * where each index correlates to the index constants used in groupUnits.
+			 */
+
+			/* Source coordinates are already in inches, perform calculations directly */
+
+			series->extremeSpread.append(calculateES(series->coordinates));
+			series->yStdev.append(calculateYStdev(series->coordinates));
+			series->xStdev.append(calculateXStdev(series->coordinates));
+			series->radialStdev.append(calculateRSD(series->coordinates));
+			series->meanRadius.append(calculateMR(series->coordinates));
+
+			/* Convert inches to MOA */
+
+			// C++ is tricky here. If we don't cast targetDistance or 100 to a double, then calculations like 650 / 100 will return 6 instead of 6.5!
+			series->extremeSpread.append( series->extremeSpread.at(INCH) / (1.047 * ((double)series->targetDistance / (double)100)) );
+			series->yStdev.append( series->yStdev.at(INCH) / (1.047 * ((double)series->targetDistance / (double)100)) );
+			series->xStdev.append( series->xStdev.at(INCH) / (1.047 * ((double)series->targetDistance / (double)100)) );
+			series->radialStdev.append( series->radialStdev.at(INCH) / (1.047 * ((double)series->targetDistance / (double)100)) );
+			series->meanRadius.append( series->meanRadius.at(INCH) / (1.047 * ((double)series->targetDistance / (double)100)) );
+
+			/* Convert inches to centimeters, then perform calculations */
+
+			QList<QPair<double, double> > coordinatesCm;
+			for ( int i = 0; i < series->coordinates.size(); i++ )
+			{
+				// convert inches to cm
+				coordinatesCm.append( QPair<double, double>(series->coordinates.at(i).first * 2.54, series->coordinates.at(i).second * 2.54) );
+			}
+
+			series->extremeSpread.append(calculateES(coordinatesCm));
+			series->yStdev.append(calculateYStdev(coordinatesCm));
+			series->xStdev.append(calculateXStdev(coordinatesCm));
+			series->radialStdev.append(calculateRSD(coordinatesCm));
+			series->meanRadius.append(calculateMR(coordinatesCm));
+
+			/* Convert inches to mils */
+
+			// mils = target distance (converted from yards to inches), divided by 1000. What elegance!
+			series->extremeSpread.append( series->extremeSpread.at(INCH) / (((double)series->targetDistance * 3 * 12) / (double)1000) );
+			series->yStdev.append( series->yStdev.at(INCH) / (((double)series->targetDistance * 3 * 12) / (double)1000) );
+			series->xStdev.append( series->xStdev.at(INCH) / (((double)series->targetDistance * 3 * 12) / (double)1000) );
+			series->radialStdev.append( series->radialStdev.at(INCH) / (((double)series->targetDistance * 3 * 12) / (double)1000) );
+			series->meanRadius.append( series->meanRadius.at(INCH) / (((double)series->targetDistance * 3 * 12) / (double)1000) );
+
+			const char *groupUnits2;
+			if ( groupUnits->currentIndex() == INCH )
+			{
+				groupUnits2 = "in";
+			}
+			else if ( groupUnits->currentIndex() == MOA )
+			{
+				groupUnits2 = "MOA";
+			}
+			else if ( groupUnits->currentIndex() == CENTIMETER )
+			{
+				groupUnits2 = "cm";
+			}
+			else
+			{
+				groupUnits2 = "mil";
+			}
+
+			if ( groupMeasurementType->currentIndex() == ES )
+			{
+				series->groupSizeLabel = new QLabel(QString("%1 %2").arg(series->extremeSpread.at(groupUnits->currentIndex()), 0, 'f', 3).arg(groupUnits2));
+			}
+			else if ( groupMeasurementType->currentIndex() == YSTDEV )
+			{
+				series->groupSizeLabel = new QLabel(QString("%1 %2").arg(series->yStdev.at(groupUnits->currentIndex()), 0, 'f', 3).arg(groupUnits2));
+			}
+			else if ( groupMeasurementType->currentIndex() == XSTDEV )
+			{
+				series->groupSizeLabel = new QLabel(QString("%1 %2").arg(series->xStdev.at(groupUnits->currentIndex()), 0, 'f', 3).arg(groupUnits2));
+			}
+			else if ( groupMeasurementType->currentIndex() == RSD )
+			{
+				series->groupSizeLabel = new QLabel(QString("%1 %2").arg(series->radialStdev.at(groupUnits->currentIndex()), 0, 'f', 3).arg(groupUnits2));
+			}
+			else
+			{
+				series->groupSizeLabel = new QLabel(QString("%1 %2").arg(series->meanRadius.at(groupUnits->currentIndex()), 0, 'f', 3).arg(groupUnits2));
+			}
+
+			qDebug() << "Series '" << series->name->text() << "' has ES" << series->extremeSpread << ", RSD" << series->radialStdev << ", and MR" << series->meanRadius << "at target distance" << series->targetDistance;
+
+			seatingSeriesData.append(series);
+		}
+	}
+
+	/* We're finished parsing the file */
+
+	if ( seatingSeriesData.empty() )
+	{
+		qDebug() << "Didn't find any shot data in this file, bail";
+
+		QMessageBox *msg = new QMessageBox();
+		msg->setIcon(QMessageBox::Critical);
+		msg->setText(QString("Unable to find ShotMarker data in '%1'").arg(path));
+		msg->setWindowTitle("Error");
+		msg->exec();
+	}
+	else
+	{
+		qDebug() << "Detected ShotMarker file" << path;
+
+		QMessageBox *msg = new QMessageBox();
+		msg->setIcon(QMessageBox::Information);
+		msg->setText(QString("Detected ShotMarker data\n\nUsing '%1'").arg(path));
+		msg->setWindowTitle("Success");
+		msg->exec();
+
+		// Proceed to display the data
+		DisplaySeriesData();
+	}
+}
+
+QList<SeatingSeries *> SeatingDepthTest::ExtractShotMarkerSeriesTar ( QString path )
+{
+	QList<SeatingSeries *> allSeries;
+	SeatingSeries *curSeries = new SeatingSeries();
+	QTemporaryDir tempDir;
+	int ret;
+
+	if ( ! tempDir.isValid() )
+	{
+		qDebug() << "Temp directory is NOT valid";
+	}
+
+	qDebug() << "Temporary directory:" << tempDir.path();
+
+	/*
+	 * ShotMarker .tar files contain one .z file for each string being exported.
+	 * Each .z file is a zlib-compressed JSON file containing shot data for that string.
+	 */
+
+	QFile rf(path);
+	if ( ! rf.open(QIODevice::ReadOnly) )
+	{
+		qDebug() << "Failed to open ShotMarker .tar file:" << path;
+		return allSeries;
+	}
+
+	ret = untar(rf, tempDir.path());
+	if ( ret )
+	{
+		qDebug() << "Error while extracting ShotMarker .tar file:" << path;
+		return allSeries;
+	}
+
+	/*
+	 * We have a temp directory with our extracted files in it. Now iterate over each .z
+	 * file and decompress it.
+	 */
+
+	QDir dir(tempDir.path());
+	QStringList stringFiles = dir.entryList(QStringList() << "*.z", QDir::Files);
+
+	qDebug() << "iterating over files:";
+	int seriesNum = 1;
+	foreach ( QString filename, stringFiles )
+	{
+		QString path(tempDir.path());
+		path.append("/");
+		path.append(filename);
+		qDebug() << path;
+
+
+		QFile file(path);
+		file.open(QIODevice::ReadOnly);
+		QByteArray buf = file.readAll();
+		qDebug() << "file:" << path << ", size:" << buf.size();
+		
+		// 1mb ought to be enough for anybody!
+		unsigned char *destBuf = (unsigned char *)malloc(1024 * 1024);
+		qDebug() << "malloc returned" << (void *)destBuf;
+		if ( destBuf == NULL )
+		{
+			qDebug() << "malloc returned NULL! skipping... but we should really throw an exception here.";
+			continue;
+		}
+
+		mz_ulong uncomp_len = 1024 * 1024;
+		qDebug() << "calling uncompress 1 with destBuf=" << (void *)destBuf << ", uncomp_len=" << uncomp_len << ", buf.data()=" << buf.data() << ", buf.size()=" << buf.size();
+		ret = uncompress(destBuf, &uncomp_len, (const unsigned char *)buf.data(), buf.size());
+
+		qDebug() << "output size:" << uncomp_len;
+		if ( ret != MZ_OK )
+		{
+			qDebug() << "Failed to uncompress, skipping..." << path;
+			free(destBuf);
+			continue;
+		}
+		
+		//qDebug() << "calling uncompress 2 with destBuf=" << (void *)destBuf << ", uncomp_len=" << uncomp_len << ", buf.data()=" << buf.data() << ", buf.size()=" << buf.size();
+		//uncompress(destBuf, &uncomp_len, (const unsigned char *)buf.data(), buf.size());
+		QByteArray ba = QByteArray::fromRawData((const char *)destBuf, uncomp_len);
+		//qDebug() << "decompressed" << uncomp_len << ":" << ba;
+	
+		QJsonParseError parseError;
+		QJsonDocument jsonDoc;
+		jsonDoc = QJsonDocument::fromJson(ba, &parseError);
+
+		if ( parseError.error != QJsonParseError::NoError )
+		{
+			qDebug() << "JSON parse error, skipping... at" << parseError.offset << ":" << parseError.errorString();
+			free(destBuf);
+			continue;
+		}
+
+		QJsonObject jsonObj = jsonDoc.object();
+
+		/* We have a JSON file containing a single series */
+
+		qDebug() << "Beginning new series";
+
+		curSeries = new SeatingSeries();
+		curSeries->isValid = false;
+		curSeries->seriesNum = seriesNum;
+		qDebug() << "name =" << jsonObj["name"].toString();
+		curSeries->name = new QLabel(jsonObj["name"].toString() + QString(" (%1%2)").arg(jsonObj["dist"].toInt()).arg(jsonObj["dist_unit"].toString()));
+		curSeries->deleted = false;
+		QDateTime dateTime;
+		dateTime.setMSecsSinceEpoch(jsonObj["ts"].toVariant().toULongLong());
+		curSeries->firstDate = dateTime.date().toString(Qt::TextDate);
+		curSeries->firstTime = dateTime.time().toString(Qt::TextDate);
+
+		qDebug() << "setting date =" << curSeries->firstDate << " time =" << curSeries->firstTime << "from ts" << jsonObj["ts"].toVariant().toULongLong();
+
+		if ( jsonObj["dist_unit"].toString() == "y" )
+		{
+			// distance is in yards already
+			curSeries->targetDistance = jsonObj["dist"].toInt();
+		}
+		else
+		{
+			// convert from meters to yards
+			curSeries->targetDistance = jsonObj["dist"].toInt() * 1.0936133; // the result is cast to an int
+		}
+
+		foreach ( const QJsonValue& shot, jsonObj["shots"].toArray() )
+		{
+			// convert from millimeters to inches
+			double xMm = shot["x"].toDouble() + jsonObj["cal_x"].toDouble();
+			double yMm = shot["y"].toDouble() + jsonObj["cal_y"].toDouble();
+			qDebug() << "adding coords" << QPair<double,double>(xMm / 25.4, yMm / 25.4) << "from mm:" << QPair<double,double>(xMm, yMm);
+			curSeries->coordinates.append(QPair<double,double>(xMm / 25.4, yMm / 25.4));
+		}
+
+		// Finish parsing the current series.
+		qDebug() << "End of JSON";
+
+		if ( curSeries->coordinates.size() > 0 )
+		{
+			qDebug() << "Adding curSeries to allSeries";
+
+			allSeries.append(curSeries);
+		}
+
+		free(destBuf);
+
+		seriesNum++;
+	}
+
+	return allSeries;
+}
+
+QList<SeatingSeries *> SeatingDepthTest::ExtractShotMarkerSeriesCsv ( QTextStream &csv )
+{
+	QList<SeatingSeries *> allSeries;
+	SeatingSeries *curSeries = new SeatingSeries();
+	curSeries->isValid = false;
+	curSeries->deleted = false;
+	curSeries->seriesNum = -1;
+
+	int i = 0;
+	int seriesNum = 1;
+	while ( ! csv.atEnd() )
+	{
+		QString line = csv.readLine();
+
+		// ShotMarker uses comma (,) as delimeter
+		QStringList rows(line.split(","));
+
+		// Trim whitespace from cells
+		QMutableStringListIterator it(rows);
+		while ( it.hasNext() )
+		{
+			it.next();
+			it.setValue(it.value().trimmed());
+		}
+
+		qDebug() << "Line" << i << ":" << rows;
+
+		// Validate the first row header
+		if ( i == 0 )
+		{
+			if ( (rows.size() >= 1) && (rows.at(0).contains("ShotMarker Archived Data")) )
+			{
+				qDebug() << "Found the ShotMarker header";
+			}
+			else
+			{
+				qDebug() << "File doesn't have the ShotMarker header, bailing";
+				return allSeries;
+			}
+		}
+
+		if ( rows.size() >= 5 )
+		{
+			// Check if first cell is a date, signifying the beginning of a new series
+			QDate seriesDate;
+			seriesDate = QDate::fromString(rows.at(0), "MMM d yyyy");
+			if ( seriesDate.isValid() )
+			{
+				 // End the previous series (if necessary) and start a new one
+
+				if ( curSeries->coordinates.size() > 0 )
+				{
+					qDebug() << "Adding curSeries to allSeries";
+
+					allSeries.append(curSeries);
+				}
+
+				qDebug() << "Beginning new series";
+
+				curSeries = new SeatingSeries();
+				curSeries->isValid = false;
+				curSeries->seriesNum = seriesNum;
+				curSeries->name = new QLabel(rows.at(1) + QString(" (%1)").arg(rows.at(3)));
+				curSeries->deleted = false;
+				curSeries->firstDate = rows.at(0);
+
+				if ( rows.at(3).right(1) == "y" )
+				{
+					// distance is in yards already
+					QString distance = rows.at(3);
+					distance.chop(1);
+					curSeries->targetDistance = distance.toInt(NULL, 10);
+				}
+				else
+				{
+					// convert from meters to yards
+					QString distance = rows.at(3);
+					distance.chop(1);
+					curSeries->targetDistance = distance.toInt(NULL, 10) * 1.0936133; // the result is casted to an int
+				}
+
+				seriesNum++;
+			}
+			else if ( rows.size() >= 17 )
+			{
+				// This is either a row containing headers, shot data, or avg/SD summary data
+
+				QTime seriesTime;
+				seriesTime = QTime::fromString(rows.at(1), "h:mm:ss ap");
+				if ( seriesTime.isValid() )
+				{
+					// Rows with a time in the second cell are shot data
+
+					if ( curSeries->firstTime.isNull() )
+					{
+						curSeries->firstTime = rows.at(1);
+						qDebug() << "firstTime =" << curSeries->firstTime;
+					}
+
+					qDebug() << "adding coords" << QPair<double,double>(rows.at(7).toDouble(), rows.at(8).toDouble());
+
+					curSeries->coordinates.append(QPair<double,double>(rows.at(7).toDouble(), rows.at(8).toDouble()));
+				}
+			}
+		}
+		else
+		{
+			qDebug() << "Skipping line";
+		}
+
+		i++;
+	}
+
+	// End of the file. Finish parsing the current series.
+	qDebug() << "End of file";
+
+	if ( curSeries->coordinates.size() > 0 )
+	{
+		qDebug() << "Adding curSeries to allSeries";
+
+		allSeries.append(curSeries);
+	}
+
+	return allSeries;
+}
+
+
 void SeatingDepthTest::autofillClicked ( bool state )
 {
 	qDebug() << "autofillClicked state =" << state;
@@ -2889,7 +3557,7 @@ void SeatingDepthTest::addNewClicked ( bool state )
 	series->enabled = new QCheckBox();
 	series->enabled->setChecked(true);
 
-	connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesCheckBoxChanged(int)));
+	connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesManualCheckBoxChanged(int)));
 	seatingSeriesGrid->addWidget(series->enabled, numRows - 1, 0);
 
 	int newSeriesNum = 1;
@@ -2914,14 +3582,22 @@ void SeatingDepthTest::addNewClicked ( bool state )
 	series->cartridgeLength->setSingleStep(0.001);
 	series->cartridgeLength->setMinimumWidth(100);
 	series->cartridgeLength->setMaximumWidth(100);
-	seatingSeriesGrid->addWidget(series->cartridgeLength, numRows - 1, 2);
+
+	QHBoxLayout *cartridgeLengthLayout = new QHBoxLayout();
+	cartridgeLengthLayout->addWidget(series->cartridgeLength);
+	cartridgeLengthLayout->addStretch(0);
+	seatingSeriesGrid->addLayout(cartridgeLengthLayout, numRows - 1, 2);
 
 	series->groupSize = new QDoubleSpinBox();
 	series->groupSize->setDecimals(3);
 	series->groupSize->setSingleStep(0.001);
 	series->groupSize->setMinimumWidth(100);
 	series->groupSize->setMaximumWidth(100);
-	seatingSeriesGrid->addWidget(series->groupSize, numRows - 1, 3);
+
+	QHBoxLayout *groupSizeLayout = new QHBoxLayout();
+	groupSizeLayout->addWidget(series->groupSize);
+	groupSizeLayout->addStretch(0);
+	seatingSeriesGrid->addLayout(groupSizeLayout, numRows - 1, 3);
 
 	series->deleteButton = new QPushButton();
 	connect(series->deleteButton, SIGNAL(clicked(bool)), this, SLOT(deleteClicked(bool)));
@@ -2978,112 +3654,54 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 {
 	qDebug() << "Seating depth test";
 
-	/* Left panel */
-
 	graphPreview = NULL;
+	prevShotMarkerDir = QDir::homePath();
 	prevSaveDir = QDir::homePath();
+
+	/* Left panel */
 
 	QVBoxLayout *leftLayout = new QVBoxLayout();
 
-	// Wrap grid in a widget to make the grid scrollable
-	QWidget *scrollAreaWidget = new QWidget();
+	QLabel *selectLabel = new QLabel("Select input type\nto populate series data\n");
+	selectLabel->setAlignment(Qt::AlignCenter);
 
-	seatingSeriesGrid = new QGridLayout(scrollAreaWidget);
-	seatingSeriesGrid->setColumnStretch(0, 0);
-	seatingSeriesGrid->setColumnStretch(1, 1);
-	seatingSeriesGrid->setColumnStretch(2, 2);
-	seatingSeriesGrid->setColumnStretch(3, 2);
-	seatingSeriesGrid->setColumnStretch(4, 3);
-	seatingSeriesGrid->setHorizontalSpacing(25);
+	QPushButton *smFileButton = new QPushButton("Select ShotMarker file");
+	connect(smFileButton, SIGNAL(clicked(bool)), this, SLOT(selectShotMarkerFile(bool)));
+	smFileButton->setMinimumWidth(300);
+	smFileButton->setMaximumWidth(300);
+	smFileButton->setMinimumHeight(50);
+	smFileButton->setMaximumHeight(50);
 
-	QCheckBox *headerCheckBox = new QCheckBox();
-	headerCheckBox->setChecked(true);
-	connect(headerCheckBox, SIGNAL(stateChanged(int)), this, SLOT(headerCheckBoxChanged(int)));
-	seatingSeriesGrid->addWidget(headerCheckBox, 0, 0);
+	QPushButton *manualEntryButton = new QPushButton("Manual data entry");
+	connect(manualEntryButton, SIGNAL(clicked(bool)), this, SLOT(manualDataEntry(bool)));
+	manualEntryButton->setMinimumWidth(300);
+	manualEntryButton->setMaximumWidth(300);
+	manualEntryButton->setMinimumHeight(50);
+	manualEntryButton->setMaximumHeight(50);
 
-	/* Headers for series data */
+	QVBoxLayout *placeholderLayout = new QVBoxLayout();
+	placeholderLayout->addStretch(0);
+	placeholderLayout->addWidget(selectLabel);
+	placeholderLayout->setAlignment(selectLabel, Qt::AlignCenter);
+	placeholderLayout->addWidget(smFileButton);
+	placeholderLayout->setAlignment(smFileButton, Qt::AlignCenter);
+	placeholderLayout->addWidget(manualEntryButton);
+	placeholderLayout->setAlignment(manualEntryButton, Qt::AlignCenter);
+	placeholderLayout->addStretch(0);
 
-	QLabel *headerNumber = new QLabel("Series Name");
-	seatingSeriesGrid->addWidget(headerNumber, 0, 1, Qt::AlignVCenter);
-	headerLengthType = new QLabel("CBTO");
-	seatingSeriesGrid->addWidget(headerLengthType, 0, 2, Qt::AlignVCenter);
-	headerGroupType = new QLabel("Group Size (ES)");
-	seatingSeriesGrid->addWidget(headerGroupType, 0, 3, Qt::AlignVCenter);
-	QLabel *headerDelete = new QLabel("");
-	seatingSeriesGrid->addWidget(headerDelete, 0, 4, Qt::AlignVCenter);
+	QWidget *placeholderWidget = new QWidget();
+	placeholderWidget->setLayout(placeholderLayout);
 
-	scrollArea = new QScrollArea();
-	scrollArea->setWidget(scrollAreaWidget);
-	scrollArea->setWidgetResizable(true);
+	stackedWidget = new QStackedWidget();
+	stackedWidget->addWidget(placeholderWidget);
+	stackedWidget->setCurrentIndex(0);
 
-	scrollLayout = new QVBoxLayout();
-	scrollLayout->addWidget(scrollArea);
-
-	addNewButton = new QPushButton("Add new group");
-	addNewButton->setStyleSheet("font-weight: bold");
-	connect(addNewButton, SIGNAL(clicked(bool)), this, SLOT(addNewClicked(bool)));
-	addNewButton->setMinimumWidth(225);
-	addNewButton->setMaximumWidth(225);
-
-	QPushButton *autofillButton = new QPushButton("Auto-fill cartridge lengths");
-	connect(autofillButton, SIGNAL(clicked(bool)), this, SLOT(autofillClicked(bool)));
-	autofillButton->setMinimumWidth(225);
-	autofillButton->setMaximumWidth(225);
-
-	QHBoxLayout *utilitiesLayout = new QHBoxLayout();
-	utilitiesLayout->addWidget(addNewButton);
-	utilitiesLayout->addWidget(autofillButton);
-
-	scrollLayout->addLayout(utilitiesLayout);
-
+	QVBoxLayout *stackedLayout = new QVBoxLayout();
+	stackedLayout->addWidget(stackedWidget);
 	QGroupBox *seatingGroupBox = new QGroupBox("Seating depth data:");
-	seatingGroupBox->setLayout(scrollLayout);
+	seatingGroupBox->setLayout(stackedLayout);
 
 	leftLayout->addWidget(seatingGroupBox);
-
-	/* Create initial row */
-
-	SeatingSeries *series = new SeatingSeries();
-
-	series->deleted = false;
-
-	series->enabled = new QCheckBox();
-	series->enabled->setChecked(true);
-
-	connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesCheckBoxChanged(int)));
-	seatingSeriesGrid->addWidget(series->enabled, 1, 0);
-
-	series->seriesNum = 1;
-
-	series->name = new QLabel("Series 1");
-	seatingSeriesGrid->addWidget(series->name, 1, 1);
-
-	series->cartridgeLength = new QDoubleSpinBox();
-	series->cartridgeLength->setDecimals(3);
-	series->cartridgeLength->setSingleStep(0.001);
-	series->cartridgeLength->setMinimumWidth(100);
-	series->cartridgeLength->setMaximumWidth(100);
-	seatingSeriesGrid->addWidget(series->cartridgeLength, 1, 2);
-
-	series->groupSize = new QDoubleSpinBox();
-	series->groupSize->setDecimals(3);
-	series->groupSize->setSingleStep(0.001);
-	series->groupSize->setMinimumWidth(100);
-	series->groupSize->setMaximumWidth(100);
-	seatingSeriesGrid->addWidget(series->groupSize, 1, 3);
-
-	series->deleteButton = new QPushButton();
-	connect(series->deleteButton, SIGNAL(clicked(bool)), this, SLOT(deleteClicked(bool)));
-	series->deleteButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
-	series->deleteButton->setFixedSize(series->deleteButton->minimumSizeHint());
-	seatingSeriesGrid->addWidget(series->deleteButton, 1, 4, Qt::AlignLeft);
-
-	seatingSeriesGrid->setRowMinimumHeight(0, series->cartridgeLength->sizeHint().height());
-
-	seatingSeriesData.append(series);
-
-	// Add an empty stretch row at the end for proper spacing
-	seatingSeriesGrid->setRowStretch(seatingSeriesGrid->rowCount(), 1);
 
 	/* Right panel */
 
@@ -3130,6 +3748,8 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 
 	groupMeasurementType = new QComboBox();
 	groupMeasurementType->addItem("Extreme Spread (ES)");
+	groupMeasurementType->addItem("Y Stdev");
+	groupMeasurementType->addItem("X Stdev");
 	groupMeasurementType->addItem("Radial Stdev (RSD)");
 	groupMeasurementType->addItem("Mean Radius (MR)");
 	connect(groupMeasurementType, SIGNAL(activated(int)), this, SLOT(groupMeasurementTypeChanged(int)));
@@ -3221,6 +3841,317 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 	this->setLayout(pageLayout);
 }
 
+void SeatingDepthTest::loadNewShotData ( bool state )
+{
+	qDebug() << "loadNewShotData state =" << state;
+
+	QMessageBox::StandardButton reply;
+	reply = QMessageBox::question(this, "Load new data", "Are you sure you want to load new shot data?\n\nThis will clear your current work.", QMessageBox::Yes | QMessageBox::Cancel);
+
+	if ( reply == QMessageBox::Yes )
+	{
+		qDebug() << "User said yes";
+
+		// Hide the shot data screen. This returns to the initial screen to choose a new shot data file.
+		stackedWidget->removeWidget(scrollWidget);
+
+		// Delete the loaded shot data
+		seatingSeriesData.clear();
+
+		// Disconnect the group measurement type signal (used in imported data entry), if necessary
+		disconnect(groupMeasurementType, SIGNAL(activated(int)), this, SLOT(importedGroupMeasurementTypeChanged(int)));
+		disconnect(groupUnits, SIGNAL(activated(int)), this, SLOT(importedGroupUnitsChanged(int)));
+	}
+	else
+	{
+		qDebug() << "User said cancel";
+	}
+}
+
+static bool SeatingSeriesComparator ( SeatingSeries *one, SeatingSeries *two )
+{
+	return (one->seriesNum < two->seriesNum);
+}
+
+void SeatingDepthTest::DisplaySeriesData ( void )
+{
+	// Sort the list by series number
+	std::sort(seatingSeriesData.begin(), seatingSeriesData.end(), SeatingSeriesComparator);
+
+	// If we already have series data displayed, clear it out first. This call is a no-op if scrollWidget is not already added to stackedWidget.
+	stackedWidget->removeWidget(scrollWidget);
+
+	QVBoxLayout *scrollLayout = new QVBoxLayout();
+
+	// Wrap grid in a widget to make the grid scrollable
+	QWidget *scrollAreaWidget = new QWidget();
+
+	seatingSeriesGrid = new QGridLayout(scrollAreaWidget);
+	seatingSeriesGrid->setColumnStretch(0, 0);
+	seatingSeriesGrid->setColumnStretch(1, 1);
+	seatingSeriesGrid->setColumnStretch(2, 2);
+	seatingSeriesGrid->setColumnStretch(3, 3);
+	seatingSeriesGrid->setColumnStretch(4, 3);
+	seatingSeriesGrid->setHorizontalSpacing(25);
+
+	scrollArea = new QScrollArea();
+	scrollArea->setWidget(scrollAreaWidget);
+	scrollArea->setWidgetResizable(true);
+
+	scrollLayout->addWidget(scrollArea);
+
+	/* Create utilities toolbar under scroll area */
+
+	QPushButton *loadNewButton = new QPushButton("Load new shot data file");
+	connect(loadNewButton, SIGNAL(clicked(bool)), this, SLOT(loadNewShotData(bool)));
+	loadNewButton->setMinimumWidth(225);
+	loadNewButton->setMaximumWidth(225);
+
+	QPushButton *autofillButton = new QPushButton("Auto-fill cartridge lengths");
+	connect(autofillButton, SIGNAL(clicked(bool)), this, SLOT(autofillClicked(bool)));
+	autofillButton->setMinimumWidth(225);
+	autofillButton->setMaximumWidth(225);
+
+	QHBoxLayout *utilitiesLayout = new QHBoxLayout();
+	utilitiesLayout->addWidget(loadNewButton);
+	utilitiesLayout->addWidget(autofillButton);
+
+	scrollLayout->addLayout(utilitiesLayout);
+
+	scrollWidget = new QWidget();
+	scrollWidget->setLayout(scrollLayout);
+
+	stackedWidget->addWidget(scrollWidget);
+	stackedWidget->setCurrentWidget(scrollWidget);
+
+	QCheckBox *headerCheckBox = new QCheckBox();
+	headerCheckBox->setChecked(true);
+	connect(headerCheckBox, SIGNAL(stateChanged(int)), this, SLOT(headerCheckBoxChanged(int)));
+	seatingSeriesGrid->addWidget(headerCheckBox, 0, 0);
+
+	/*
+	 * Connect signals to update all calculations in the Group Size column when the user selects a new group measurement type (ES, RSD, MR, etc.) or
+	 * measurement unit (in, MOA, cm, mil, etc.). This is only done for imported shot data, where the group sizes are QLabels and not user-controllable.
+	 */
+
+	connect(groupMeasurementType, SIGNAL(activated(int)), this, SLOT(importedGroupMeasurementTypeChanged(int)));
+	connect(groupUnits, SIGNAL(activated(int)), this, SLOT(importedGroupUnitsChanged(int)));
+
+	/* Headers for series data */
+
+	QLabel *headerNumber = new QLabel("Series Name");
+	seatingSeriesGrid->addWidget(headerNumber, 0, 1, Qt::AlignVCenter);
+	headerLengthType = new QLabel("CBTO");
+	seatingSeriesGrid->addWidget(headerLengthType, 0, 2, Qt::AlignVCenter);
+
+	const char *headerGroupType2;
+	if ( groupMeasurementType->currentIndex() == ES )
+	{
+		headerGroupType2 = "Group Size (ES)";
+	}
+	else if ( groupMeasurementType->currentIndex() == YSTDEV )
+	{
+		headerGroupType2 = "Group Size (Y Stdev)";
+	}
+	else if ( groupMeasurementType->currentIndex() == XSTDEV )
+	{
+		headerGroupType2 = "Group Size (X Stdev)";
+	}
+	else if ( groupMeasurementType->currentIndex() == RSD )
+	{
+		headerGroupType2 = "Group Size (RSD)";
+	}
+	else
+	{
+		headerGroupType2 = "Group Size (MR)";
+	}
+
+	headerGroupType = new QLabel(headerGroupType2);
+	seatingSeriesGrid->addWidget(headerGroupType, 0, 3, Qt::AlignVCenter);
+
+
+	QLabel *headerDate = new QLabel("Series Date");
+	seatingSeriesGrid->addWidget(headerDate, 0, 4, Qt::AlignVCenter);
+
+	for ( int i = 0; i < seatingSeriesData.size(); i++ )
+	{
+		SeatingSeries *series = seatingSeriesData.at(i);
+
+		connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesCheckBoxChanged(int)));
+
+		seatingSeriesGrid->addWidget(series->enabled, i + 1, 0);
+		seatingSeriesGrid->addWidget(series->name, i + 1, 1, Qt::AlignVCenter);
+
+		QHBoxLayout *cartridgeLengthLayout = new QHBoxLayout();
+		cartridgeLengthLayout->addWidget(series->cartridgeLength);
+		cartridgeLengthLayout->addStretch(0);
+		seatingSeriesGrid->addLayout(cartridgeLengthLayout, i + 1, 2);
+
+		seatingSeriesGrid->addWidget(series->groupSizeLabel, i + 1, 3, Qt::AlignVCenter);
+
+		QLabel *datetimeLabel = new QLabel(QString("%1 %2").arg(series->firstDate).arg(series->firstTime));
+		seatingSeriesGrid->addWidget(datetimeLabel, i + 1, 4, Qt::AlignVCenter);
+
+		seatingSeriesGrid->setRowMinimumHeight(0, series->cartridgeLength->sizeHint().height());
+	}
+
+	// Add an empty stretch row at the end for proper spacing
+	seatingSeriesGrid->setRowStretch(seatingSeriesData.size() + 1, 1);
+
+	scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+	scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+	scrollArea->setWidgetResizable(true);
+}
+
+void SeatingDepthTest::manualDataEntry ( bool state )
+{
+	qDebug() << "manualDataEntry state =" << state;
+
+	// If we already have series data displayed, clear it out first. This call is a no-op if scrollWidget is not already added to stackedWidget.
+	stackedWidget->removeWidget(scrollWidget);
+
+	QVBoxLayout *scrollLayout = new QVBoxLayout();
+
+	// Wrap grid in a widget to make the grid scrollable
+	QWidget *scrollAreaWidget = new QWidget();
+
+	seatingSeriesGrid = new QGridLayout(scrollAreaWidget);
+	seatingSeriesGrid->setColumnStretch(0, 0);
+	seatingSeriesGrid->setColumnStretch(1, 1);
+	seatingSeriesGrid->setColumnStretch(2, 2);
+	seatingSeriesGrid->setColumnStretch(3, 2);
+	seatingSeriesGrid->setColumnStretch(4, 3);
+	seatingSeriesGrid->setHorizontalSpacing(25);
+
+	scrollArea = new QScrollArea();
+	scrollArea->setWidget(scrollAreaWidget);
+	scrollArea->setWidgetResizable(true);
+
+	scrollLayout->addWidget(scrollArea);
+
+	/* Create utilities toolbar under scroll area */
+
+	addNewButton = new QPushButton("Add new group");
+	addNewButton->setStyleSheet("font-weight: bold");
+	connect(addNewButton, SIGNAL(clicked(bool)), this, SLOT(addNewClicked(bool)));
+	addNewButton->setMinimumWidth(225);
+	addNewButton->setMaximumWidth(225);
+
+	QPushButton *loadNewButton = new QPushButton("Load new shot data file");
+	connect(loadNewButton, SIGNAL(clicked(bool)), this, SLOT(loadNewShotData(bool)));
+	loadNewButton->setMinimumWidth(225);
+	loadNewButton->setMaximumWidth(225);
+
+	QPushButton *autofillButton = new QPushButton("Auto-fill cartridge lengths");
+	connect(autofillButton, SIGNAL(clicked(bool)), this, SLOT(autofillClicked(bool)));
+	autofillButton->setMinimumWidth(225);
+	autofillButton->setMaximumWidth(225);
+
+	QHBoxLayout *utilitiesLayout = new QHBoxLayout();
+	utilitiesLayout->addWidget(addNewButton);
+	utilitiesLayout->addWidget(loadNewButton);
+	utilitiesLayout->addWidget(autofillButton);
+
+	scrollLayout->addLayout(utilitiesLayout);
+
+	scrollWidget = new QWidget();
+	scrollWidget->setLayout(scrollLayout);
+
+	stackedWidget->addWidget(scrollWidget);
+	stackedWidget->setCurrentWidget(scrollWidget);
+
+	QCheckBox *headerCheckBox = new QCheckBox();
+	headerCheckBox->setChecked(true);
+	connect(headerCheckBox, SIGNAL(stateChanged(int)), this, SLOT(headerCheckBoxChanged(int)));
+	seatingSeriesGrid->addWidget(headerCheckBox, 0, 0);
+
+	/* Headers for series data */
+
+	QLabel *headerNumber = new QLabel("Series Name");
+	seatingSeriesGrid->addWidget(headerNumber, 0, 1, Qt::AlignVCenter);
+	headerLengthType = new QLabel("CBTO");
+	seatingSeriesGrid->addWidget(headerLengthType, 0, 2, Qt::AlignVCenter);
+
+	const char *headerGroupType2;
+	if ( groupMeasurementType->currentIndex() == ES )
+	{
+		headerGroupType2 = "Group Size (ES)";
+	}
+	else if ( groupMeasurementType->currentIndex() == YSTDEV )
+	{
+		headerGroupType2 = "Group Size (Y Stdev)";
+	}
+	else if ( groupMeasurementType->currentIndex() == XSTDEV )
+	{
+		headerGroupType2 = "Group Size (X Stdev)";
+	}
+	else if ( groupMeasurementType->currentIndex() == RSD )
+	{
+		headerGroupType2 = "Group Size (RSD)";
+	}
+	else
+	{
+		headerGroupType2 = "Group Size (MR)";
+	}
+
+	headerGroupType = new QLabel(headerGroupType2);
+	seatingSeriesGrid->addWidget(headerGroupType, 0, 3, Qt::AlignVCenter);
+	QLabel *headerDelete = new QLabel("");
+	seatingSeriesGrid->addWidget(headerDelete, 0, 4, Qt::AlignVCenter);
+
+	/* Create initial row */
+
+	SeatingSeries *series = new SeatingSeries();
+
+	series->deleted = false;
+
+	series->enabled = new QCheckBox();
+	series->enabled->setChecked(true);
+
+	connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesManualCheckBoxChanged(int)));
+	seatingSeriesGrid->addWidget(series->enabled, 1, 0);
+
+	series->seriesNum = 1;
+
+	series->name = new QLabel("Series 1");
+	seatingSeriesGrid->addWidget(series->name, 1, 1);
+
+	series->cartridgeLength = new QDoubleSpinBox();
+	series->cartridgeLength->setDecimals(3);
+	series->cartridgeLength->setSingleStep(0.001);
+	series->cartridgeLength->setMinimumWidth(100);
+	series->cartridgeLength->setMaximumWidth(100);
+
+	QHBoxLayout *cartridgeLengthLayout = new QHBoxLayout();
+	cartridgeLengthLayout->addWidget(series->cartridgeLength);
+	cartridgeLengthLayout->addStretch(0);
+	seatingSeriesGrid->addLayout(cartridgeLengthLayout, 1, 2);
+
+	series->groupSize = new QDoubleSpinBox();
+	series->groupSize->setDecimals(3);
+	series->groupSize->setSingleStep(0.001);
+	series->groupSize->setMinimumWidth(100);
+	series->groupSize->setMaximumWidth(100);
+
+	QHBoxLayout *groupSizeLayout = new QHBoxLayout();
+	groupSizeLayout->addWidget(series->groupSize);
+	groupSizeLayout->addStretch(0);
+	seatingSeriesGrid->addLayout(groupSizeLayout, 1, 3);
+
+	series->deleteButton = new QPushButton();
+	connect(series->deleteButton, SIGNAL(clicked(bool)), this, SLOT(deleteClicked(bool)));
+	series->deleteButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
+	series->deleteButton->setFixedSize(series->deleteButton->minimumSizeHint());
+	seatingSeriesGrid->addWidget(series->deleteButton, 1, 4, Qt::AlignLeft);
+
+	seatingSeriesGrid->setRowMinimumHeight(0, series->cartridgeLength->sizeHint().height());
+
+	seatingSeriesData.append(series);
+
+	// Add an empty stretch row at the end for proper spacing
+	seatingSeriesGrid->setRowStretch(seatingSeriesGrid->rowCount(), 1);
+}
+
 void SeatingDepthTest::seriesCheckBoxChanged ( int state )
 {
 	QCheckBox *checkBox = qobject_cast<QCheckBox *>(sender());
@@ -3234,15 +4165,56 @@ void SeatingDepthTest::seriesCheckBoxChanged ( int state )
 		if ( checkBox == rowCheckBox )
 		{
 			QWidget *seriesName = seatingSeriesGrid->itemAtPosition(i, 1)->widget();
-			QWidget *cartridgeLength = seatingSeriesGrid->itemAtPosition(i, 2)->widget();
-			QWidget *groupSize = seatingSeriesGrid->itemAtPosition(i, 3)->widget();
+			QWidget *cartridgeLength = seatingSeriesGrid->itemAtPosition(i, 2)->layout()->itemAt(0)->widget();
+			QWidget *groupSizeLabel = seatingSeriesGrid->itemAtPosition(i, 3)->widget();
+			QWidget *seriesDate = seatingSeriesGrid->itemAtPosition(i, 4)->widget();
+
+			if ( checkBox->isChecked() )
+			{
+				qDebug() << "Grid row" << i << "was checked";
+
+				seriesName->setEnabled(true);
+				cartridgeLength->setEnabled(true);
+				groupSizeLabel->setEnabled(true);
+				seriesDate->setEnabled(true);
+			}
+			else
+			{
+				qDebug() << "Grid row" << i << "was unchecked";
+
+				seriesName->setEnabled(false);
+				cartridgeLength->setEnabled(false);
+				groupSizeLabel->setEnabled(false);
+				seriesDate->setEnabled(false);
+			}
+
+			return;
+		}
+	}
+}
+
+void SeatingDepthTest::seriesManualCheckBoxChanged ( int state )
+{
+	QCheckBox *checkBox = qobject_cast<QCheckBox *>(sender());
+
+	qDebug() << "seriesManualCheckBoxChanged state =" << state;
+
+	// We have the checkbox object, now locate its row in the grid
+	for ( int i = 0; i < seatingSeriesGrid->rowCount() - 1; i++ )
+	{
+		QWidget *rowCheckBox = seatingSeriesGrid->itemAtPosition(i, 0)->widget();
+		if ( checkBox == rowCheckBox )
+		{
+			QWidget *seriesName = seatingSeriesGrid->itemAtPosition(i, 1)->widget();
+			QWidget *cartridgeLength = seatingSeriesGrid->itemAtPosition(i, 2)->layout()->itemAt(0)->widget();
+			QWidget *groupSize = seatingSeriesGrid->itemAtPosition(i, 3)->layout()->itemAt(0)->widget();
 			QWidget *deleteButton = seatingSeriesGrid->itemAtPosition(i, 4)->widget();
 
 			if ( checkBox->isChecked() )
 			{
 				qDebug() << "Grid row" << i << "was checked";
 
-				seriesName->setStyleSheet("");
+				seriesName->setEnabled(true);
 				cartridgeLength->setEnabled(true);
 				groupSize->setEnabled(true);
 				deleteButton->setEnabled(true);;
@@ -3251,7 +4223,7 @@ void SeatingDepthTest::seriesCheckBoxChanged ( int state )
 			{
 				qDebug() << "Grid row" << i << "was unchecked";
 
-				seriesName->setStyleSheet("color: #878787");
+				seriesName->setEnabled(false);
 				cartridgeLength->setEnabled(false);
 				groupSize->setEnabled(false);
 				deleteButton->setEnabled(false);
@@ -3278,7 +4250,7 @@ void SeatingDepthTest::headerCheckBoxChanged ( int state )
 	}
 	else
 	{
-		qDebug() << "Header checkbox was checked";
+		qDebug() << "Header checkbox was unchecked";
 
 		for ( int i = 0; i < seatingSeriesGrid->rowCount() - 1; i++ )
 		{
@@ -3340,6 +4312,14 @@ void SeatingDepthTest::groupMeasurementTypeChanged ( int index )
 	{
 		headerGroupType->setText("Group Size (ES)");
 	}
+	else if ( index == YSTDEV )
+	{
+		headerGroupType->setText("Group Size (Y Stdev)");
+	}
+	else if ( index == XSTDEV )
+	{
+		headerGroupType->setText("Group Size (X Stdev)");
+	}
 	else if ( index == RSD )
 	{
 		headerGroupType->setText("Group Size (RSD)");
@@ -3347,6 +4327,151 @@ void SeatingDepthTest::groupMeasurementTypeChanged ( int index )
 	else
 	{
 		headerGroupType->setText("Group Size (MR)");
+	}
+}
+
+void SeatingDepthTest::importedGroupMeasurementTypeChanged ( int index )
+{
+	qDebug() << "importedGroupMeasurementTypeChanged index =" << index;
+
+	/*
+	 * This signal handler is only connected in imported data entry mode. When the group measurement type is changed,
+	 * we need to iterate through and update every Group Size row to display the new measurement type.
+	 */
+
+	const char *groupMeasurementType2;
+	if ( index == ES )
+	{
+		headerGroupType->setText("Group Size (ES)");
+		groupMeasurementType2 = "ES";
+	}
+	else if ( index == YSTDEV )
+	{
+		headerGroupType->setText("Group Size (Y Stdev)");
+		groupMeasurementType2 = "Y Stdev";
+	}
+	else if ( index == XSTDEV )
+	{
+		headerGroupType->setText("Group Size (X Stdev)");
+		groupMeasurementType2 = "X Stdev";
+	}
+	else if ( index == RSD )
+	{
+		headerGroupType->setText("Group Size (RSD)");
+		groupMeasurementType2 = "RSD";
+	}
+	else
+	{
+		headerGroupType->setText("Group Size (MR)");
+		groupMeasurementType2 = "MR";
+	}
+
+	const char *groupUnits2;
+	if ( groupUnits->currentIndex() == INCH )
+	{
+		groupUnits2 = "in";
+	}
+	else if ( groupUnits->currentIndex() == MOA )
+	{
+		groupUnits2 = "MOA";
+	}
+	else if ( groupUnits->currentIndex() == CENTIMETER )
+	{
+		groupUnits2 = "cm";
+	}
+	else
+	{
+		groupUnits2 = "mil";
+	}
+
+	for ( int i = 0; i < seatingSeriesData.size(); i++ )
+	{
+		SeatingSeries *series = seatingSeriesData.at(i);
+
+		double groupSize;
+		if ( index == ES )
+		{
+			groupSize = series->extremeSpread.at(groupUnits->currentIndex());
+		}
+		else if ( index == YSTDEV )
+		{
+			groupSize = series->yStdev.at(groupUnits->currentIndex());
+		}
+		else if ( index == XSTDEV )
+		{
+			groupSize = series->xStdev.at(groupUnits->currentIndex());
+		}
+		else if ( index == RSD )
+		{
+			groupSize = series->radialStdev.at(groupUnits->currentIndex());
+		}
+		else
+		{
+			groupSize = series->meanRadius.at(groupUnits->currentIndex());
+		}
+
+		qDebug() << "Setting series" << i << "to" << groupMeasurementType2 << groupSize;
+
+		series->groupSizeLabel->setText(QString("%1 %2").arg(groupSize, 0, 'f', 3).arg(groupUnits2));
+	}
+}
+
+void SeatingDepthTest::importedGroupUnitsChanged ( int index )
+{
+	qDebug() << "importedGroupUnitsChanged index =" << index;
+
+	/*
+	 * This signal handler is only connected in imported data entry mode. When the group size units is changed,
+	 * we need to iterate through and update every Group Size row to display the new unit.
+	 */
+
+	const char *groupUnits2;
+	if ( index == INCH )
+	{
+		groupUnits2 = "in";
+	}
+	else if ( index == MOA )
+	{
+		groupUnits2 = "MOA";
+	}
+	else if ( index == CENTIMETER )
+	{
+		groupUnits2 = "cm";
+	}
+	else
+	{
+		groupUnits2 = "mil";
+	}
+
+	for ( int i = 0; i < seatingSeriesData.size(); i++ )
+	{
+		SeatingSeries *series = seatingSeriesData.at(i);
+
+		double groupSize;
+		if ( groupMeasurementType->currentIndex() == ES )
+		{
+			groupSize = series->extremeSpread.at(index);
+		}
+		else if ( groupMeasurementType->currentIndex() == YSTDEV )
+		{
+			groupSize = series->yStdev.at(index);
+		}
+		else if ( groupMeasurementType->currentIndex() == XSTDEV )
+		{
+			groupSize = series->xStdev.at(index);
+		}
+		else if ( groupMeasurementType->currentIndex() == RSD )
+		{
+			groupSize = series->radialStdev.at(index);
+		}
+		else
+		{
+			groupSize = series->meanRadius.at(index);
+		}
+
+		qDebug() << "Setting series" << i << "to" << groupSize << groupUnits2;
+
+		series->groupSizeLabel->setText(QString("%1 %2").arg(groupSize, 0, 'f', 3).arg(groupUnits2));
 	}
 }
 
@@ -3396,7 +4521,7 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 				return;
 			}
 
-			if ( series->groupSize->value() == 0 )
+			if ( series->groupSize && (series->groupSize->value() == 0) )
 			{
 				qDebug() << series->name->text() << "is missing group size, bailing";
 
@@ -3465,7 +4590,37 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 		SeatingSeries *series = seriesToGraph.at(i);
 
 		double cartridgeLength = series->cartridgeLength->value();
-		double groupSize = series->groupSize->value();
+
+		double groupSize;
+		if ( series->groupSize )
+		{
+			// If the user selected manual data entry
+			groupSize = series->groupSize->value();
+		}
+		else
+		{
+			// If the user imported data from a .CSV
+			if ( groupMeasurementType->currentIndex() == ES )
+			{
+				groupSize = series->extremeSpread.at(groupUnits->currentIndex());
+			}
+			else if ( groupMeasurementType->currentIndex() == YSTDEV )
+			{
+				groupSize = series->yStdev.at(groupUnits->currentIndex());
+			}
+			else if ( groupMeasurementType->currentIndex() == XSTDEV )
+			{
+				groupSize = series->xStdev.at(groupUnits->currentIndex());
+			}
+			else if ( groupMeasurementType->currentIndex() == RSD )
+			{
+				groupSize = series->radialStdev.at(groupUnits->currentIndex());
+			}
+			else
+			{
+				groupSize = series->meanRadius.at(groupUnits->currentIndex());
+			}
+		}
 
 		qDebug() << QString("%1 - %2, %3").arg(series->name->text()).arg(cartridgeLength).arg(groupSize);
 		qDebug() << "";
@@ -3565,6 +4720,14 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 	if ( groupMeasurementType->currentIndex() == ES )
 	{
 		groupMeasurementType2 = "Extreme Spread";
+	}
+	else if ( groupMeasurementType->currentIndex() == YSTDEV )
+	{
+		groupMeasurementType2 = "Y Standard Deviation";
+	}
+	else if ( groupMeasurementType->currentIndex() == XSTDEV )
+	{
+		groupMeasurementType2 = "X Standard Deviation";
 	}
 	else if ( groupMeasurementType->currentIndex() == RSD )
 	{
@@ -3674,15 +4837,13 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 
 	for ( int i = 0; i < seriesToGraph.size(); i++ )
 	{
-		SeatingSeries *series = seriesToGraph.at(i);
-
 		// Collect annotation contents
 		QStringList aboveAnnotationText;
 		QStringList belowAnnotationText;
 
 		if ( groupSizeCheckBox->isChecked() )
 		{
-			QString annotation = QString::number(series->groupSize->value());
+			QString annotation = QString::number(yPoints.at(i), 'f', 3);
 			if ( groupSizeLocation->currentIndex() == ABOVE_STRING )
 			{
 				aboveAnnotationText.append(annotation);
@@ -3698,7 +4859,7 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 			if ( prevSizeSet )
 			{
 				QString sign;
-				double delta = series->groupSize->value() - prevSize;
+				double delta = yPoints.at(i) - prevSize;
 				if ( delta < 0 )
 				{
 					sign = QString("-");
@@ -3724,7 +4885,7 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 
 		double yCoord;
 
-		yCoord = series->groupSize->value();
+		yCoord = yPoints.at(i);
 
 		QCPItemText *belowAnnotation = new QCPItemText(customPlot);
 		belowAnnotation->setText(belowAnnotationText.join('\n'));
@@ -3849,31 +5010,43 @@ About::About ( QWidget *parent )
 {
 	qDebug() << "About this app";
 
+	QLabel *logo = new QLabel();
 	QPixmap logoPix(":/images/logo.png");
+	logo->setPixmap(logoPix.scaledToWidth(600, Qt::SmoothTransformation));
 
 	QLabel *about1 = new QLabel();
 	about1->setTextFormat(Qt::RichText);
-	about1->setText(QString("<center><h1>Version %1</h1>By Michael Coppola<br><a href=\"https://github.com/mncoppola/ChronoPlotter\">github.com/mncoppola/ChronoPlotter</a>").arg(CHRONOPLOTTER_VERSION));
+	about1->setText(QString("<center><h1>Version %1</h1>By Michael Coppola<br>&#169; 2021 Precision Analytics LLC<p><a href=\"https://chronoplotter.com\">ChronoPlotter.com</a>").arg(CHRONOPLOTTER_VERSION));
 	about1->setOpenExternalLinks(true);
-
-	QLabel *logo = new QLabel();
-	logo->setPixmap(logoPix.scaledToWidth(600, Qt::SmoothTransformation));
 
 	QLabel *about2 = new QLabel();
 	about2->setTextFormat(Qt::RichText);
 	about2->setText("<center>If you found this tool helpful, share some primers with a friend in need.<br><br>Or consider contributing to:<br><a href=\"https://www.doctorswithoutborders.org/\">Doctors Without Borders</a><br><a href=\"https://www.navysealfoundation.org/\">The Navy SEAL Foundation</a><br><a href=\"https://eji.org/\">Equal Justice Initiative</a><br><a href=\"https://www.mskcc.org/\">Memorial Sloan Kettering Cancer Center</a>");
 	about2->setOpenExternalLinks(true);
 
+	QPushButton *legalButton = new QPushButton("Legal Notices", this);
+	legalButton->setMinimumWidth(250);
+	legalButton->setMaximumWidth(250);
+	connect(legalButton, &QPushButton::released, this, &About::showLegal);
+
 	QVBoxLayout *layout = new QVBoxLayout();
 	layout->addStretch(1);
 	layout->addWidget(logo);
+	layout->setAlignment(logo, Qt::AlignHCenter);
 	layout->addWidget(about1);
 	layout->addSpacing(10);
 	layout->addWidget(about2);
-	layout->setAlignment(logo, Qt::AlignHCenter);
 	layout->addStretch(3);
+	layout->addWidget(legalButton, 0, Qt::AlignHCenter);
 
 	setLayout(layout);
+}
+
+void About::showLegal ( void )
+{
+	#define LEGAL_NOTICES "ChronoPlotter (\"This software\") is intended for informational and educational usage only. This software visualizes and performs statistical analysis of load development data provided by the user but does not make or imply any load development recommendations based on that data. Users must always exercise extreme caution when performing testing related to load development, and must operate within safe load ranges published by component manufacturers at all times.\n\nPrecision Analytics LLC and the author(s) of this software disclaim any and all warranties and liabilities pertaining to usage of this software and the results provided by it. Users assume all risk, responsibilities, and liabilities arising from the usage or mis-usage of this software, including but not limited to any and all injuries, death, or losses or damages to property.\n\nThe author(s) of this software strive to provide accurate analysis of the user’s data, but cannot guarantee the absence of bugs in this software. This software is open source, and users should review this software’s source code to verify the accuracy of its calculations, algorithms, and reporting of those results prior to using this software for load development."
+
+	QMessageBox::information(this, "Legal Notices", LEGAL_NOTICES);
 }
 
 void MainWindow::closeEvent ( QCloseEvent *event )
