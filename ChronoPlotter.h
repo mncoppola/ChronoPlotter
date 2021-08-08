@@ -19,7 +19,7 @@
 #include <QMainWindow>
 #include "qcustomplot/qcustomplot.h"
 
-#define CHRONOPLOTTER_VERSION "2.0.0"
+#define CHRONOPLOTTER_VERSION "2.1.0"
 
 #define SCATTER 0
 #define LINE_SD 1
