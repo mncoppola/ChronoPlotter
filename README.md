@@ -2,7 +2,7 @@
 
 ![ChronoPlotter logo](https://github.com/mncoppola/ChronoPlotter/blob/main/images/logo.png?raw=true)
 
-Easily generate graphs using recorded data from your chronograph. Supports LabRadar and MagnetoSpeed with SD card. Create customizable graphs and charts comparing charge weight and velocity without manually entering your chronograph data. Additionally supports creating graphs for seating depth testing.
+Easily create clean, customizable charts and graphs of your load development sessions with little to no manual data entry. Supports most chronographs and e-target systems including LabRadar, MagnetoSpeed, Competition Electronics ProChrono, and ShotMarker, as well as manual data entry.
 
 This page is only used to view the source code for ChronoPlotter.
 
