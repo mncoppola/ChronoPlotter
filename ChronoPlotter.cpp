@@ -542,7 +542,6 @@ PowderTest::PowderTest ( QWidget *parent )
 	connect(avgCheckBox, SIGNAL(clicked(bool)), this, SLOT(avgCheckBoxChanged(bool)));
 	avgLayout->addWidget(avgCheckBox, 0);
 	avgLabel = new QLabel("Show avg. velocity");
-	avgLabel->setStyleSheet("color: #878787");
 	avgLayout->addWidget(avgLabel, 1);
 	avgLocation = new QComboBox();
 	avgLocation->addItem("above shot strings");
@@ -571,7 +570,6 @@ PowderTest::PowderTest ( QWidget *parent )
 	connect(trendCheckBox, SIGNAL(clicked(bool)), this, SLOT(trendCheckBoxChanged(bool)));
 	trendLayout->addWidget(trendCheckBox, 0);
 	trendLabel = new QLabel("Show trend line");
-	trendLabel->setStyleSheet("color: #878787");
 	trendLayout->addWidget(trendLabel, 1);
 	trendLineType = new QComboBox();
 	trendLineType->addItem("solid line");
@@ -580,6 +578,15 @@ PowderTest::PowderTest ( QWidget *parent )
 	trendLineType->setEnabled(false);
 	trendLayout->addWidget(trendLineType);
 	optionsLayout->addLayout(trendLayout);
+
+	QHBoxLayout *overrideSpacingLayout = new QHBoxLayout();
+	overrideSpacingCheckBox = new QCheckBox();
+	overrideSpacingCheckBox->setChecked(false);
+	connect(overrideSpacingCheckBox, SIGNAL(clicked(bool)), this, SLOT(overrideSpacingCheckBoxChanged(bool)));
+	overrideSpacingLayout->addWidget(overrideSpacingCheckBox, 0);
+	QLabel *overrideSpacingLabel = new QLabel("Override default x-axis spacing");
+	overrideSpacingLayout->addWidget(overrideSpacingLabel, 1);
+	optionsLayout->addLayout(overrideSpacingLayout);
 
 	// Don't resize row heights if window height changes
 	optionsLayout->addStretch(0);
@@ -1481,17 +1488,37 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		qDebug() << "Stdev:" << stdev;
 		qDebug() << "";
 
-		// We use the index as our x-value here to ensure equal spacing between series regardless of their charge weight. We override the xAxis ticker to then use our custom tick labels.
-		xAvgPoints.push_back(i);
+		/*
+		 * The user can select either default x-axis spacing (x-ticks are spaced proportionally and irregular values will create "holes" in the
+		 * graph) or force equal spacing regardless of value. The default case plots the x-values as usual, while the latter case plots a regularly
+		 * incrementing index and overrides the xAxis ticker to display custom tick labels.
+		 */
+
+		if ( overrideSpacingCheckBox->isChecked() )
+		{
+			xAvgPoints.push_back(i);
+		}
+		else
+		{
+			xAvgPoints.push_back(chargeWeight);
+		}
 		yAvgPoints.push_back(mean);
 
 		if ( graphType->currentIndex() == SCATTER )
 		{
 			for ( int j = 0; j < totalShots; j++ )
 			{
-				xPoints.push_back(i);
+				if ( overrideSpacingCheckBox->isChecked() )
+				{
+					xPoints.push_back(i);
+					allXPoints.push_back(i);
+				}
+				else
+				{
+					xPoints.push_back(chargeWeight);
+					allXPoints.push_back(chargeWeight);
+				}
 				yPoints.push_back(series->muzzleVelocities.at(j));
-				allXPoints.push_back(i);
 				allYPoints.push_back(series->muzzleVelocities.at(j));
 			}
 		}
@@ -1499,16 +1526,37 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		{
 			for ( int j = 0; j < totalShots; j++ )
 			{
-				allXPoints.push_back(i);
+				if ( overrideSpacingCheckBox->isChecked() )
+				{
+					allXPoints.push_back(i);
+				}
+				else
+				{
+					allXPoints.push_back(chargeWeight);
+				}
 				allYPoints.push_back(series->muzzleVelocities.at(j));
 			}
 
-			xPoints.push_back(i);
+			if ( overrideSpacingCheckBox->isChecked() )
+			{
+				xPoints.push_back(i);
+			}
+			else
+			{
+				xPoints.push_back(chargeWeight);
+			}
 			yPoints.push_back(mean);
 			yError.push_back(stdev);
 		}
 
-		textTicker->addTick(i, QString::number(series->chargeWeight->value()));
+		if ( overrideSpacingCheckBox->isChecked() )
+		{
+			textTicker->addTick(i, QString::number(series->chargeWeight->value()));
+		}
+		else
+		{
+			textTicker->addTick(chargeWeight, QString::number(series->chargeWeight->value()));
+		}
 	}
 
 	/* Create average line */
@@ -1554,8 +1602,8 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 
 		QVector<double> xTrendPoints;
 		QVector<double> yTrendPoints;
-		xTrendPoints.push_back(allXPoints.at(0));
-		yTrendPoints.push_back(res[1]);
+		xTrendPoints.push_back(allXPoints.first());
+		yTrendPoints.push_back(res[1] + (allXPoints.first() * res[0]));
 		xTrendPoints.push_back(allXPoints.last());
 		yTrendPoints.push_back(res[1] + (allXPoints.last() * res[0]));
 
@@ -1691,6 +1739,8 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 
 		// Collect annotation contents. Only display ES and SD if there are 2+ shots in the series.
 
+		double chargeWeight = series->chargeWeight->value();
+
 		int totalShots = series->muzzleVelocities.size();
 		int velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
 		int velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
@@ -1707,9 +1757,17 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 			rectPen.setWidthF(1.3);
 			rect->setPen(rectPen);
 			rect->topLeft->setType(QCPItemPosition::ptAbsolute);
-			rect->topLeft->setCoords(customPlot->xAxis->coordToPixel(i) - 7, customPlot->yAxis->coordToPixel(velocityMax) - 7);
 			rect->bottomRight->setType(QCPItemPosition::ptAbsolute);
-			rect->bottomRight->setCoords(customPlot->xAxis->coordToPixel(i) + 7, customPlot->yAxis->coordToPixel(velocityMin) + 7);
+			if ( overrideSpacingCheckBox->isChecked() )
+			{
+				rect->topLeft->setCoords(customPlot->xAxis->coordToPixel(i) - 7, customPlot->yAxis->coordToPixel(velocityMax) - 7);
+				rect->bottomRight->setCoords(customPlot->xAxis->coordToPixel(i) + 7, customPlot->yAxis->coordToPixel(velocityMin) + 7);
+			}
+			else
+			{
+				rect->topLeft->setCoords(customPlot->xAxis->coordToPixel(chargeWeight) - 7, customPlot->yAxis->coordToPixel(velocityMax) - 7);
+				rect->bottomRight->setCoords(customPlot->xAxis->coordToPixel(chargeWeight) + 7, customPlot->yAxis->coordToPixel(velocityMin) + 7);
+			}
 		}
 
 		if ( esCheckBox->isChecked() && (series->muzzleVelocities.size() > 1) )
@@ -1816,7 +1874,14 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		belowAnnotation->setFont(QFont("DejaVu Sans", scaleFontSize(9)));
 		belowAnnotation->setColor(QColor("#4d4d4d"));
 		belowAnnotation->position->setType(QCPItemPosition::ptAbsolute);
-		belowAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(i), customPlot->yAxis->coordToPixel(yCoordBelow) + 10);
+		if ( overrideSpacingCheckBox->isChecked() )
+		{
+			belowAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(i), customPlot->yAxis->coordToPixel(yCoordBelow) + 10);
+		}
+		else
+		{
+			belowAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(chargeWeight), customPlot->yAxis->coordToPixel(yCoordBelow) + 10);
+		}
 		belowAnnotation->setPositionAlignment(Qt::AlignHCenter | Qt::AlignTop);
 		belowAnnotation->setTextAlignment(Qt::AlignCenter);
 		belowAnnotation->setBrush(QBrush(Qt::white));
@@ -1829,7 +1894,14 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		aboveAnnotation->setFont(QFont("DejaVu Sans", scaleFontSize(9)));
 		aboveAnnotation->setColor(QColor("#4d4d4d"));
 		aboveAnnotation->position->setType(QCPItemPosition::ptAbsolute);
-		aboveAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(i), customPlot->yAxis->coordToPixel(yCoordAbove) - 10);
+		if ( overrideSpacingCheckBox->isChecked() )
+		{
+			aboveAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(i), customPlot->yAxis->coordToPixel(yCoordAbove) - 10);
+		}
+		else
+		{
+			aboveAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(chargeWeight), customPlot->yAxis->coordToPixel(yCoordAbove) - 10);
+		}
 		aboveAnnotation->setPositionAlignment(Qt::AlignHCenter | Qt::AlignBottom);
 		aboveAnnotation->setTextAlignment(Qt::AlignCenter);
 		aboveAnnotation->setBrush(QBrush(Qt::white));
@@ -1852,6 +1924,11 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		{
 			graphPreview->deleteLater();
 		}
+
+		qDebug() << "xPoints:" << xPoints;
+		qDebug() << "yPoints:" << yPoints;
+		qDebug() << "allXPoints:" << allXPoints;
+		qDebug() << "allYPoints:" << allYPoints;
 
 		graphPreview = new GraphPreview(preview);
 	}
@@ -2119,18 +2196,35 @@ void PowderTest::trendCheckBoxChanged ( bool state )
 	optionCheckBoxChanged(trendCheckBox, trendLabel, trendLineType);
 }
 
+void PowderTest::overrideSpacingCheckBoxChanged ( bool state )
+{
+	qDebug() << "overrideSpacingCheckBoxChanged state =" << state;
+
+	if ( overrideSpacingCheckBox->isChecked() )
+	{
+		trendCheckBox->setChecked(false);
+		trendCheckBox->setEnabled(false);
+		trendLabel->setStyleSheet("color: #878787");
+		trendLineType->setEnabled(false);
+	}
+	else
+	{
+		trendCheckBox->setEnabled(true);
+		trendLabel->setStyleSheet("");
+		trendLineType->setEnabled(false); // we always re-enable the checkbox unchecked, so the combobox stays disabled
+	}
+}
+
 void PowderTest::optionCheckBoxChanged ( QCheckBox *checkBox, QLabel *label, QComboBox *comboBox )
 {
 	if ( checkBox->isChecked() )
 	{
 		qDebug() << "checkbox was checked";
-		label->setStyleSheet("");
 		comboBox->setEnabled(true);
 	}
 	else
 	{
 		qDebug() << "checkbox was unchecked";
-		label->setStyleSheet("color: #878787");
 		comboBox->setEnabled(false);
 	}
 }
@@ -3784,7 +3878,6 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 	connect(gsdCheckBox, SIGNAL(clicked(bool)), this, SLOT(gsdCheckBoxChanged(bool)));
 	gsdLayout->addWidget(gsdCheckBox, 0);
 	gsdLabel = new QLabel("Show group size deltas");
-	gsdLabel->setStyleSheet("color: #878787");
 	gsdLayout->addWidget(gsdLabel, 1);
 	gsdLocation = new QComboBox();
 	gsdLocation->addItem("above shot strings");
@@ -3800,7 +3893,6 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 	connect(trendCheckBox, SIGNAL(clicked(bool)), this, SLOT(trendCheckBoxChanged(bool)));
 	trendLayout->addWidget(trendCheckBox, 0);
 	trendLabel = new QLabel("Show trend line");
-	trendLabel->setStyleSheet("color: #878787");
 	trendLayout->addWidget(trendLabel, 1);
 	trendLineType = new QComboBox();
 	trendLineType->addItem("solid line");
@@ -3809,6 +3901,15 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 	trendLineType->setEnabled(false);
 	trendLayout->addWidget(trendLineType);
 	optionsLayout->addLayout(trendLayout);
+
+	QHBoxLayout *overrideSpacingLayout = new QHBoxLayout();
+	overrideSpacingCheckBox = new QCheckBox();
+	overrideSpacingCheckBox->setChecked(false);
+	connect(overrideSpacingCheckBox, SIGNAL(clicked(bool)), this, SLOT(overrideSpacingCheckBoxChanged(bool)));
+	overrideSpacingLayout->addWidget(overrideSpacingCheckBox, 0);
+	QLabel *overrideSpacingLabel = new QLabel("Override default x-axis spacing");
+	overrideSpacingLayout->addWidget(overrideSpacingLabel, 1);
+	optionsLayout->addLayout(overrideSpacingLayout);
 
 	// Don't resize row heights if window height changes
 	optionsLayout->addStretch(0);
@@ -4281,18 +4382,36 @@ void SeatingDepthTest::trendCheckBoxChanged ( bool state )
 	optionCheckBoxChanged(trendCheckBox, trendLabel, trendLineType);
 }
 
+void SeatingDepthTest::overrideSpacingCheckBoxChanged ( bool state )
+{
+	qDebug() << "overrideSpacingCheckBoxChanged state =" << state;
+
+	if ( overrideSpacingCheckBox->isChecked() )
+	{
+		trendCheckBox->setChecked(false);
+		trendCheckBox->setEnabled(false);
+		trendLabel->setStyleSheet("color: #878787");
+		trendLineType->setEnabled(false);
+	}
+	else
+	{
+		trendCheckBox->setEnabled(true);
+		trendLabel->setStyleSheet("");
+		trendLineType->setEnabled(false); // we always re-enable the checkbox unchecked, so the combobox stays disabled
+	}
+}
+
+
 void SeatingDepthTest::optionCheckBoxChanged ( QCheckBox *checkBox, QLabel *label, QComboBox *comboBox )
 {
 	if ( checkBox->isChecked() )
 	{
 		qDebug() << "checkbox was checked";
-		label->setStyleSheet("");
 		comboBox->setEnabled(true);
 	}
 	else
 	{
 		qDebug() << "checkbox was unchecked";
-		label->setStyleSheet("color: #878787");
 		comboBox->setEnabled(false);
 	}
 }
@@ -4625,11 +4744,23 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 		qDebug() << QString("%1 - %2, %3").arg(series->name->text()).arg(cartridgeLength).arg(groupSize);
 		qDebug() << "";
 
-		// We use the index as our x-value here to ensure equal spacing between series regardless of their cartridge length. We override the xAxis ticker to then use our custom tick labels.
-		xPoints.push_back(i);
-		yPoints.push_back(groupSize);
+		/*
+		 * The user can select either default x-axis spacing (x-ticks are spaced proportionally and irregular values will create "holes" in the
+		 * graph) or force equal spacing regardless of value. The default case plots the x-values as usual, while the latter case plots a regularly
+		 * incrementing index and overrides the xAxis ticker to display custom tick labels.
+		 */
 
-		textTicker->addTick(i, QString::number(series->cartridgeLength->value()));
+		if ( overrideSpacingCheckBox->isChecked() )
+		{
+			xPoints.push_back(i);
+			textTicker->addTick(i, QString::number(cartridgeLength));
+		}
+		else
+		{
+			xPoints.push_back(cartridgeLength);
+			textTicker->addTick(cartridgeLength, QString::number(cartridgeLength));
+		}
+		yPoints.push_back(groupSize);
 	}
 
 	/* Create scatter plot */
@@ -4664,8 +4795,8 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 
 		QVector<double> xTrendPoints;
 		QVector<double> yTrendPoints;
-		xTrendPoints.push_back(xPoints.at(0));
-		yTrendPoints.push_back(res[1]);
+		xTrendPoints.push_back(xPoints.first());
+		yTrendPoints.push_back(res[1] + (xPoints.first() * res[0]));
 		xTrendPoints.push_back(xPoints.last());
 		yTrendPoints.push_back(res[1] + (xPoints.last() * res[0]));
 

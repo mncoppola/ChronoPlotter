@@ -147,6 +147,7 @@ class SeatingDepthTest : public QWidget
 		void groupSizeCheckBoxChanged(bool);
 		void gsdCheckBoxChanged(bool);
 		void trendCheckBoxChanged(bool);
+		void overrideSpacingCheckBoxChanged(bool);
 		void cartridgeMeasurementTypeChanged(int);
 		void groupMeasurementTypeChanged(int);
 		void importedGroupMeasurementTypeChanged(int);
@@ -203,6 +204,7 @@ class SeatingDepthTest : public QWidget
 		QCheckBox *groupSizeCheckBox;
 		QCheckBox *gsdCheckBox;
 		QCheckBox *trendCheckBox;
+		QCheckBox *overrideSpacingCheckBox;
 		QComboBox *groupSizeLocation;
 		QComboBox *gsdLocation;
 		QComboBox *trendLineType;
@@ -227,6 +229,7 @@ class PowderTest : public QWidget
 		void avgCheckBoxChanged(bool);
 		void vdCheckBoxChanged(bool);
 		void trendCheckBoxChanged(bool);
+		void overrideSpacingCheckBoxChanged(bool);
 		void loadNewChronographData(bool);
 		void selectLabRadarDirectory(bool);
 		void selectMagnetoSpeedFile(bool);
@@ -278,6 +281,7 @@ class PowderTest : public QWidget
 		QCheckBox *avgCheckBox;
 		QCheckBox *vdCheckBox;
 		QCheckBox *trendCheckBox;
+		QCheckBox *overrideSpacingCheckBox;
 		QComboBox *esLocation;
 		QComboBox *sdLocation;
 		QComboBox *avgLocation;
