@@ -5351,7 +5351,7 @@ About::About ( QWidget *parent )
 
 	QLabel *about2 = new QLabel();
 	about2->setTextFormat(Qt::RichText);
-	about2->setText("<center>If you found this tool helpful, share some primers with a friend in need.<br><br>Or consider contributing to:<br><a href=\"https://www.doctorswithoutborders.org/\">Doctors Without Borders</a><br><a href=\"https://www.navysealfoundation.org/\">The Navy SEAL Foundation</a><br><a href=\"https://eji.org/\">Equal Justice Initiative</a><br><a href=\"https://www.mskcc.org/\">Memorial Sloan Kettering Cancer Center</a>");
+	about2->setText("<br><center>If you found this tool helpful, please consider donating to support the project!<h1><a href=\"https://chronoplotter.com/donate\">ChronoPlotter.com/donate</a></h1><br><a href=\"https://www.doctorswithoutborders.org/\">Doctors Without Borders</a><br><a href=\"https://www.navysealfoundation.org/\">The Navy SEAL Foundation</a><br><a href=\"https://eji.org/\">Equal Justice Initiative</a><br><a href=\"https://www.mskcc.org/\">Memorial Sloan Kettering Cancer Center</a>");
 	about2->setOpenExternalLinks(true);
 
 	QPushButton *legalButton = new QPushButton("Legal Notices", this);
