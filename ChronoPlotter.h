@@ -117,11 +117,17 @@ struct SeatingSeries
 	int seriesNum;
 	QLabel *name;
 	QList<QPair<double, double> > coordinates;
+	QList<QPair<double, double> > coordinates_sighters;
 	QList<double> extremeSpread;
+	QList<double> extremeSpread_sighters;
 	QList<double> yStdev;
+	QList<double> yStdev_sighters;
 	QList<double> xStdev;
+	QList<double> xStdev_sighters;
 	QList<double> radialStdev;
+	QList<double> radialStdev_sighters;
 	QList<double> meanRadius;
+	QList<double> meanRadius_sighters;
 	int targetDistance; // in yards
 	QString firstDate;
 	QString firstTime;
@@ -147,6 +153,7 @@ class SeatingDepthTest : public QWidget
 		void groupSizeCheckBoxChanged(bool);
 		void gsdCheckBoxChanged(bool);
 		void trendCheckBoxChanged(bool);
+		void includeSightersCheckBoxChanged(bool);
 		void overrideSpacingCheckBoxChanged(bool);
 		void cartridgeMeasurementTypeChanged(int);
 		void groupMeasurementTypeChanged(int);
@@ -165,6 +172,7 @@ class SeatingDepthTest : public QWidget
 		void saveGraph(bool);
 
 	protected:
+		void updateDisplayedData ( void );
 		double calculateES ( QList<QPair<double, double> > );
 		double calculateYStdev ( QList<QPair<double, double> > );
 		double calculateXStdev ( QList<QPair<double, double> > );
@@ -204,6 +212,7 @@ class SeatingDepthTest : public QWidget
 		QCheckBox *groupSizeCheckBox;
 		QCheckBox *gsdCheckBox;
 		QCheckBox *trendCheckBox;
+		QCheckBox *includeSightersCheckBox;
 		QCheckBox *overrideSpacingCheckBox;
 		QComboBox *groupSizeLocation;
 		QComboBox *gsdLocation;
