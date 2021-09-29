@@ -5208,7 +5208,14 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 		belowAnnotation->setFont(QFont("DejaVu Sans", scaleFontSize(9)));
 		belowAnnotation->setColor(QColor("#4d4d4d"));
 		belowAnnotation->position->setType(QCPItemPosition::ptAbsolute);
-		belowAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(i), customPlot->yAxis->coordToPixel(yCoord) + 10);
+		if ( overrideSpacingCheckBox->isChecked() )
+		{
+			belowAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(i), customPlot->yAxis->coordToPixel(yCoord) + 10);
+		}
+		else
+		{
+			belowAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(xPoints.at(i)), customPlot->yAxis->coordToPixel(yCoord) + 10);
+		}
 		belowAnnotation->setPositionAlignment(Qt::AlignHCenter | Qt::AlignTop);
 		belowAnnotation->setTextAlignment(Qt::AlignCenter);
 		belowAnnotation->setBrush(QBrush(Qt::white));
@@ -5221,7 +5228,14 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 		aboveAnnotation->setFont(QFont("DejaVu Sans", scaleFontSize(9)));
 		aboveAnnotation->setColor(QColor("#4d4d4d"));
 		aboveAnnotation->position->setType(QCPItemPosition::ptAbsolute);
-		aboveAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(i), customPlot->yAxis->coordToPixel(yCoord) - 10);
+		if ( overrideSpacingCheckBox->isChecked() )
+		{
+			aboveAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(i), customPlot->yAxis->coordToPixel(yCoord) - 10);
+		}
+		else
+		{
+			aboveAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(xPoints.at(i)), customPlot->yAxis->coordToPixel(yCoord) - 10);
+		}
 		aboveAnnotation->setPositionAlignment(Qt::AlignHCenter | Qt::AlignBottom);
 		aboveAnnotation->setTextAlignment(Qt::AlignCenter);
 		aboveAnnotation->setBrush(QBrush(Qt::white));
