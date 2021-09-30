@@ -3531,8 +3531,7 @@ QList<SeatingSeries *> SeatingDepthTest::ExtractShotMarkerSeriesTar ( QString pa
 
 				qDebug() << "ignoring hidden shot" << shot["display_text"];
 			}
-
-			if ( shot["sighter"].toBool() )
+			else if ( shot["sighter"].toBool() )
 			{
 				// sighter shot
 
@@ -3673,7 +3672,7 @@ QList<SeatingSeries *> SeatingDepthTest::ExtractShotMarkerSeriesCsv ( QTextStrea
 
 						qDebug() << "ignoring hidden shot" << rows.at(2);
 					}
-					if ( rows.at(3).contains("sighter") )
+					else if ( rows.at(3).contains("sighter") )
 					{
 						// sighter shots
 
