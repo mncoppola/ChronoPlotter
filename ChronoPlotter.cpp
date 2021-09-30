@@ -3960,6 +3960,9 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 	connect(cartridgeMeasurementType, SIGNAL(activated(int)), this, SLOT(cartridgeMeasurementTypeChanged(int)));
 	optionsFormLayout->addRow(new QLabel("Cartridge measurement:"), cartridgeMeasurementType);
 
+	// create the header object that cartridgeMeasurementType controls
+	headerLengthType = new QLabel(cartridgeMeasurementType->currentText());
+
 	cartridgeUnits = new QComboBox();
 	cartridgeUnits->addItem("inches (in)");
 	cartridgeUnits->addItem("centimeters (cm)");
@@ -3973,6 +3976,30 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 	groupMeasurementType->addItem("Mean Radius (MR)");
 	connect(groupMeasurementType, SIGNAL(activated(int)), this, SLOT(groupMeasurementTypeChanged(int)));
 	optionsFormLayout->addRow(new QLabel("Group size measurement:"), groupMeasurementType);
+
+	// create the header object that groupMeasurementType controls
+	const char *headerGroupType2;
+	if ( groupMeasurementType->currentIndex() == ES )
+	{
+		headerGroupType2 = "Group Size (ES)";
+	}
+	else if ( groupMeasurementType->currentIndex() == YSTDEV )
+	{
+		headerGroupType2 = "Group Size (Y Stdev)";
+	}
+	else if ( groupMeasurementType->currentIndex() == XSTDEV )
+	{
+		headerGroupType2 = "Group Size (X Stdev)";
+	}
+	else if ( groupMeasurementType->currentIndex() == RSD )
+	{
+		headerGroupType2 = "Group Size (RSD)";
+	}
+	else
+	{
+		headerGroupType2 = "Group Size (MR)";
+	}
+	headerGroupType = new QLabel(headerGroupType2);
 
 	groupUnits = new QComboBox();
 	groupUnits->addItem("inches (in)");
@@ -4178,34 +4205,10 @@ void SeatingDepthTest::DisplaySeriesData ( void )
 
 	QLabel *headerNumber = new QLabel("Series Name");
 	seatingSeriesGrid->addWidget(headerNumber, 0, 1, Qt::AlignVCenter);
-	headerLengthType = new QLabel("CBTO");
+
+	// these two objects were previously created
 	seatingSeriesGrid->addWidget(headerLengthType, 0, 2, Qt::AlignVCenter);
-
-	const char *headerGroupType2;
-	if ( groupMeasurementType->currentIndex() == ES )
-	{
-		headerGroupType2 = "Group Size (ES)";
-	}
-	else if ( groupMeasurementType->currentIndex() == YSTDEV )
-	{
-		headerGroupType2 = "Group Size (Y Stdev)";
-	}
-	else if ( groupMeasurementType->currentIndex() == XSTDEV )
-	{
-		headerGroupType2 = "Group Size (X Stdev)";
-	}
-	else if ( groupMeasurementType->currentIndex() == RSD )
-	{
-		headerGroupType2 = "Group Size (RSD)";
-	}
-	else
-	{
-		headerGroupType2 = "Group Size (MR)";
-	}
-
-	headerGroupType = new QLabel(headerGroupType2);
 	seatingSeriesGrid->addWidget(headerGroupType, 0, 3, Qt::AlignVCenter);
-
 
 	QLabel *headerDate = new QLabel("Series Date");
 	seatingSeriesGrid->addWidget(headerDate, 0, 4, Qt::AlignVCenter);
@@ -4306,7 +4309,8 @@ void SeatingDepthTest::manualDataEntry ( bool state )
 
 	QLabel *headerNumber = new QLabel("Series Name");
 	seatingSeriesGrid->addWidget(headerNumber, 0, 1, Qt::AlignVCenter);
-	headerLengthType = new QLabel("CBTO");
+
+	// this object was previously created
 	seatingSeriesGrid->addWidget(headerLengthType, 0, 2, Qt::AlignVCenter);
 
 	const char *headerGroupType2;
@@ -4528,27 +4532,22 @@ void SeatingDepthTest::updateDisplayedData ( void )
 	const char *groupMeasurementType2;
 	if ( index == ES )
 	{
-		headerGroupType->setText("Group Size (ES)");
 		groupMeasurementType2 = "ES";
 	}
 	else if ( index == YSTDEV )
 	{
-		headerGroupType->setText("Group Size (Y Stdev)");
 		groupMeasurementType2 = "Y Stdev";
 	}
 	else if ( index == XSTDEV )
 	{
-		headerGroupType->setText("Group Size (X Stdev)");
 		groupMeasurementType2 = "X Stdev";
 	}
 	else if ( index == RSD )
 	{
-		headerGroupType->setText("Group Size (RSD)");
 		groupMeasurementType2 = "RSD";
 	}
 	else
 	{
-		headerGroupType->setText("Group Size (MR)");
 		groupMeasurementType2 = "MR";
 	}
 
