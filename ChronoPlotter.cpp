@@ -4486,7 +4486,10 @@ void SeatingDepthTest::headerCheckBoxChanged ( int state )
 		for ( int i = 0; i < seatingSeriesGrid->rowCount() - 1; i++ )
 		{
 			QCheckBox *checkBox = qobject_cast<QCheckBox *>(seatingSeriesGrid->itemAtPosition(i, 0)->widget());
-			checkBox->setChecked(true);
+			if ( checkBox->isEnabled() )
+			{
+				checkBox->setChecked(true);
+			}
 		}
 	}
 	else
@@ -4496,7 +4499,10 @@ void SeatingDepthTest::headerCheckBoxChanged ( int state )
 		for ( int i = 0; i < seatingSeriesGrid->rowCount() - 1; i++ )
 		{
 			QCheckBox *checkBox = qobject_cast<QCheckBox *>(seatingSeriesGrid->itemAtPosition(i, 0)->widget());
-			checkBox->setChecked(false);
+			if ( checkBox->isEnabled() )
+			{
+				checkBox->setChecked(false);
+			}
 		}
 	}
 }
