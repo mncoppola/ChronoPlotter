@@ -50,6 +50,9 @@
 #define ABOVE_STRING 0
 #define BELOW_STRING 0
 
+#define PROPORTIONAL 0
+#define CONSTANT 1
+
 class MainWindow : public QMainWindow
 {
 	Q_OBJECT
@@ -154,7 +157,7 @@ class SeatingDepthTest : public QWidget
 		void gsdCheckBoxChanged(bool);
 		void trendCheckBoxChanged(bool);
 		void includeSightersCheckBoxChanged(bool);
-		void overrideSpacingCheckBoxChanged(bool);
+		void xAxisSpacingChanged(int);
 		void cartridgeMeasurementTypeChanged(int);
 		void groupMeasurementTypeChanged(int);
 		void importedGroupMeasurementTypeChanged(int);
@@ -209,11 +212,11 @@ class SeatingDepthTest : public QWidget
 		QComboBox *cartridgeMeasurementType;
 		QComboBox *groupMeasurementType;
 		QComboBox *groupUnits;
+		QComboBox *xAxisSpacing;
 		QCheckBox *groupSizeCheckBox;
 		QCheckBox *gsdCheckBox;
 		QCheckBox *trendCheckBox;
 		QCheckBox *includeSightersCheckBox;
-		QCheckBox *overrideSpacingCheckBox;
 		QComboBox *groupSizeLocation;
 		QComboBox *gsdLocation;
 		QComboBox *trendLineType;
@@ -238,7 +241,7 @@ class PowderTest : public QWidget
 		void avgCheckBoxChanged(bool);
 		void vdCheckBoxChanged(bool);
 		void trendCheckBoxChanged(bool);
-		void overrideSpacingCheckBoxChanged(bool);
+		void xAxisSpacingChanged(int);
 		void loadNewChronographData(bool);
 		void selectLabRadarDirectory(bool);
 		void selectMagnetoSpeedFile(bool);
@@ -285,12 +288,12 @@ class PowderTest : public QWidget
 		QPushButton *addNewButton;
 		QComboBox *graphType;
 		QComboBox *velocityUnits;
+		QComboBox *xAxisSpacing;
 		QCheckBox *esCheckBox;
 		QCheckBox *sdCheckBox;
 		QCheckBox *avgCheckBox;
 		QCheckBox *vdCheckBox;
 		QCheckBox *trendCheckBox;
-		QCheckBox *overrideSpacingCheckBox;
 		QComboBox *esLocation;
 		QComboBox *sdLocation;
 		QComboBox *avgLocation;

@@ -507,6 +507,12 @@ PowderTest::PowderTest ( QWidget *parent )
 	velocityUnits->addItem("meters per second (m/s)");
 	optionsFormLayout->addRow(new QLabel("Velocity units:"), velocityUnits);
 
+	xAxisSpacing = new QComboBox();
+	xAxisSpacing->addItem("Proportional");
+	xAxisSpacing->addItem("Constant");
+	connect(xAxisSpacing, SIGNAL(activated(int)), this, SLOT(xAxisSpacingChanged(int)));
+	optionsFormLayout->addRow(new QLabel("X-axis spacing:"), xAxisSpacing);
+
 	optionsLayout->addLayout(optionsFormLayout);
 	optionsLayout->addWidget(new QHLine());
 
@@ -578,16 +584,6 @@ PowderTest::PowderTest ( QWidget *parent )
 	trendLineType->setEnabled(false);
 	trendLayout->addWidget(trendLineType);
 	optionsLayout->addLayout(trendLayout);
-
-	QHBoxLayout *overrideSpacingLayout = new QHBoxLayout();
-	overrideSpacingCheckBox = new QCheckBox();
-	overrideSpacingCheckBox->setChecked(false);
-	connect(overrideSpacingCheckBox, SIGNAL(clicked(bool)), this, SLOT(overrideSpacingCheckBoxChanged(bool)));
-	overrideSpacingLayout->addWidget(overrideSpacingCheckBox, 0);
-	QLabel *overrideSpacingLabel = new QLabel("Override default x-axis spacing");
-	overrideSpacingLabel->setFixedHeight(trendLineType->sizeHint().height());
-	overrideSpacingLayout->addWidget(overrideSpacingLabel, 1);
-	optionsLayout->addLayout(overrideSpacingLayout);
 
 	// Don't resize row heights if window height changes
 	optionsLayout->addStretch(0);
@@ -1495,7 +1491,7 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		 * incrementing index and overrides the xAxis ticker to display custom tick labels.
 		 */
 
-		if ( overrideSpacingCheckBox->isChecked() )
+		if ( xAxisSpacing->currentIndex() == CONSTANT )
 		{
 			xAvgPoints.push_back(i);
 		}
@@ -1509,7 +1505,7 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		{
 			for ( int j = 0; j < totalShots; j++ )
 			{
-				if ( overrideSpacingCheckBox->isChecked() )
+				if ( xAxisSpacing->currentIndex() == CONSTANT )
 				{
 					xPoints.push_back(i);
 					allXPoints.push_back(i);
@@ -1527,7 +1523,7 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		{
 			for ( int j = 0; j < totalShots; j++ )
 			{
-				if ( overrideSpacingCheckBox->isChecked() )
+				if ( xAxisSpacing->currentIndex() == CONSTANT )
 				{
 					allXPoints.push_back(i);
 				}
@@ -1538,7 +1534,7 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 				allYPoints.push_back(series->muzzleVelocities.at(j));
 			}
 
-			if ( overrideSpacingCheckBox->isChecked() )
+			if ( xAxisSpacing->currentIndex() == CONSTANT )
 			{
 				xPoints.push_back(i);
 			}
@@ -1550,7 +1546,7 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 			yError.push_back(stdev);
 		}
 
-		if ( overrideSpacingCheckBox->isChecked() )
+		if ( xAxisSpacing->currentIndex() == CONSTANT )
 		{
 			textTicker->addTick(i, QString::number(series->chargeWeight->value()));
 		}
@@ -1759,7 +1755,7 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 			rect->setPen(rectPen);
 			rect->topLeft->setType(QCPItemPosition::ptAbsolute);
 			rect->bottomRight->setType(QCPItemPosition::ptAbsolute);
-			if ( overrideSpacingCheckBox->isChecked() )
+			if ( xAxisSpacing->currentIndex() == CONSTANT )
 			{
 				rect->topLeft->setCoords(customPlot->xAxis->coordToPixel(i) - 7, customPlot->yAxis->coordToPixel(velocityMax) - 7);
 				rect->bottomRight->setCoords(customPlot->xAxis->coordToPixel(i) + 7, customPlot->yAxis->coordToPixel(velocityMin) + 7);
@@ -1875,7 +1871,7 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		belowAnnotation->setFont(QFont("DejaVu Sans", scaleFontSize(9)));
 		belowAnnotation->setColor(QColor("#4d4d4d"));
 		belowAnnotation->position->setType(QCPItemPosition::ptAbsolute);
-		if ( overrideSpacingCheckBox->isChecked() )
+		if ( xAxisSpacing->currentIndex() == CONSTANT )
 		{
 			belowAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(i), customPlot->yAxis->coordToPixel(yCoordBelow) + 10);
 		}
@@ -1895,7 +1891,7 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		aboveAnnotation->setFont(QFont("DejaVu Sans", scaleFontSize(9)));
 		aboveAnnotation->setColor(QColor("#4d4d4d"));
 		aboveAnnotation->position->setType(QCPItemPosition::ptAbsolute);
-		if ( overrideSpacingCheckBox->isChecked() )
+		if ( xAxisSpacing->currentIndex() == CONSTANT )
 		{
 			aboveAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(i), customPlot->yAxis->coordToPixel(yCoordAbove) - 10);
 		}
@@ -2197,11 +2193,11 @@ void PowderTest::trendCheckBoxChanged ( bool state )
 	optionCheckBoxChanged(trendCheckBox, trendLabel, trendLineType);
 }
 
-void PowderTest::overrideSpacingCheckBoxChanged ( bool state )
+void PowderTest::xAxisSpacingChanged ( int index )
 {
-	qDebug() << "overrideSpacingCheckBoxChanged state =" << state;
+	qDebug() << "xAxisSpacingChanged index =" << index;
 
-	if ( overrideSpacingCheckBox->isChecked() )
+	if ( index == CONSTANT )
 	{
 		trendCheckBox->setChecked(false);
 		trendCheckBox->setEnabled(false);
@@ -4008,6 +4004,12 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 	groupUnits->addItem("milliradians (mil)");
 	optionsFormLayout->addRow(new QLabel("Group size units:"), groupUnits);
 
+	xAxisSpacing = new QComboBox();
+	xAxisSpacing->addItem("Proportional");
+	xAxisSpacing->addItem("Constant");
+	connect(xAxisSpacing, SIGNAL(activated(int)), this, SLOT(xAxisSpacingChanged(int)));
+	optionsFormLayout->addRow(new QLabel("X-axis spacing:"), xAxisSpacing);
+
 	optionsLayout->addLayout(optionsFormLayout);
 	optionsLayout->addWidget(new QHLine());
 
@@ -4063,16 +4065,6 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 	includeSightersLabel->setFixedHeight(trendLineType->sizeHint().height());
 	includeSightersLayout->addWidget(includeSightersLabel, 1);
 	optionsLayout->addLayout(includeSightersLayout);
-
-	QHBoxLayout *overrideSpacingLayout = new QHBoxLayout();
-	overrideSpacingCheckBox = new QCheckBox();
-	overrideSpacingCheckBox->setChecked(false);
-	connect(overrideSpacingCheckBox, SIGNAL(clicked(bool)), this, SLOT(overrideSpacingCheckBoxChanged(bool)));
-	overrideSpacingLayout->addWidget(overrideSpacingCheckBox, 0);
-	QLabel *overrideSpacingLabel = new QLabel("Override default x-axis spacing");
-	overrideSpacingLabel->setFixedHeight(trendLineType->sizeHint().height());
-	overrideSpacingLayout->addWidget(overrideSpacingLabel, 1);
-	optionsLayout->addLayout(overrideSpacingLayout);
 
 	// Don't resize row heights if window height changes
 	optionsLayout->addStretch(0);
@@ -4665,11 +4657,11 @@ void SeatingDepthTest::includeSightersCheckBoxChanged ( bool state )
 	updateDisplayedData();
 }
 
-void SeatingDepthTest::overrideSpacingCheckBoxChanged ( bool state )
+void SeatingDepthTest::xAxisSpacingChanged ( int index )
 {
-	qDebug() << "overrideSpacingCheckBoxChanged state =" << state;
+	qDebug() << "xAxisSpacingChanged index =" << index;
 
-	if ( overrideSpacingCheckBox->isChecked() )
+	if ( index == CONSTANT )
 	{
 		trendCheckBox->setChecked(false);
 		trendCheckBox->setEnabled(false);
@@ -4939,7 +4931,7 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 		 * incrementing index and overrides the xAxis ticker to display custom tick labels.
 		 */
 
-		if ( overrideSpacingCheckBox->isChecked() )
+		if ( xAxisSpacing->currentIndex() == CONSTANT )
 		{
 			xPoints.push_back(i);
 			textTicker->addTick(i, QString::number(cartridgeLength));
@@ -5212,7 +5204,7 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 		belowAnnotation->setFont(QFont("DejaVu Sans", scaleFontSize(9)));
 		belowAnnotation->setColor(QColor("#4d4d4d"));
 		belowAnnotation->position->setType(QCPItemPosition::ptAbsolute);
-		if ( overrideSpacingCheckBox->isChecked() )
+		if ( xAxisSpacing->currentIndex() == CONSTANT )
 		{
 			belowAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(i), customPlot->yAxis->coordToPixel(yCoord) + 10);
 		}
@@ -5232,7 +5224,7 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 		aboveAnnotation->setFont(QFont("DejaVu Sans", scaleFontSize(9)));
 		aboveAnnotation->setColor(QColor("#4d4d4d"));
 		aboveAnnotation->position->setType(QCPItemPosition::ptAbsolute);
-		if ( overrideSpacingCheckBox->isChecked() )
+		if ( xAxisSpacing->currentIndex() == CONSTANT )
 		{
 			aboveAnnotation->position->setCoords(customPlot->xAxis->coordToPixel(i), customPlot->yAxis->coordToPixel(yCoord) - 10);
 		}
