@@ -48,7 +48,7 @@
 #define MIL 3
 
 #define ABOVE_STRING 0
-#define BELOW_STRING 0
+#define BELOW_STRING 1
 
 #define PROPORTIONAL 0
 #define CONSTANT 1
