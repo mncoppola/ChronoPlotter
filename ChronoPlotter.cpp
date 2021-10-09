@@ -513,7 +513,7 @@ PowderTest::PowderTest ( QWidget *parent )
 	optionsFormLayout->addRow(new QLabel("Weight units:"), weightUnits);
 
 	velocityUnits = new QComboBox();
-	velocityUnits->addItem("feet per second (fps)");
+	velocityUnits->addItem("feet per second (ft/s)");
 	velocityUnits->addItem("meters per second (m/s)");
 	optionsFormLayout->addRow(new QLabel("Velocity units:"), velocityUnits);
 
@@ -793,7 +793,7 @@ void PowderTest::addNewClicked ( bool state )
 	const char *velocityUnits2;
 	if ( velocityUnits->currentIndex() == FPS )
 	{
-		velocityUnits2 = "fps";
+		velocityUnits2 = "ft/s";
 	}
 	else
 	{
@@ -868,7 +868,7 @@ void PowderTest::enterDataClicked ( bool state )
 				const char *velocityUnits2;
 				if ( velocityUnits->currentIndex() == FPS )
 				{
-					velocityUnits2 = "fps";
+					velocityUnits2 = "ft/s";
 				}
 				else
 				{
@@ -1038,7 +1038,7 @@ void PowderTest::manualDataEntry ( bool state )
 	const char *velocityUnits2;
 	if ( velocityUnits->currentIndex() == FPS )
 	{
-		velocityUnits2 = "fps";
+		velocityUnits2 = "ft/s";
 	}
 	else
 	{
@@ -1694,7 +1694,7 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 	const char *velocityUnits2;
 	if ( velocityUnits->currentIndex() == FPS )
 	{
-		velocityUnits2 = "fps";
+		velocityUnits2 = "ft/s";
 	}
 	else
 	{
@@ -2179,7 +2179,7 @@ void PowderTest::velocityUnitsChanged ( int index )
 
 	if ( index == FPS )
 	{
-		velocityUnit = "fps";
+		velocityUnit = "ft/s";
 	}
 	else
 	{
@@ -2472,6 +2472,7 @@ ChronoSeries *PowderTest::ExtractLabRadarSeries ( QTextStream &csv )
 		else if ( rows.at(0).compare("Units velocity") == 0 )
 		{
 			series->velocityUnits = rows.at(1);
+			series->velocityUnits.replace("fps", "ft/s");
 			qDebug() << "velocityUnits =" << series->velocityUnits;
 		}
 	}
