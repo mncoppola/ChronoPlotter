@@ -246,6 +246,7 @@ class PowderTest : public QWidget
 		void selectLabRadarDirectory(bool);
 		void selectMagnetoSpeedFile(bool);
 		void selectProChronoFile(bool);
+		void selectShotMarkerFile(bool);
 		void manualDataEntry(bool);
 		void rrClicked(bool);
 		void addNewClicked(bool);
@@ -264,6 +265,7 @@ class PowderTest : public QWidget
 		ChronoSeries *ExtractLabRadarSeries ( QTextStream & );
 		QList<ChronoSeries *> ExtractMagnetoSpeedSeries ( QTextStream & );
 		QList<ChronoSeries *> ExtractProChronoSeries ( QTextStream & );
+		QList<ChronoSeries *> ExtractShotMarkerSeriesTar ( QString );
 		void DisplaySeriesData ( void );
 		void renderGraph ( bool );
 
@@ -272,6 +274,7 @@ class PowderTest : public QWidget
 		QString prevLabRadarDir;
 		QString prevMagnetoSpeedDir;
 		QString prevProChronoDir;
+		QString prevShotMarkerDir;
 		QString prevSaveDir;
 		QStackedWidget *stackedWidget;
 		QWidget *scrollWidget;

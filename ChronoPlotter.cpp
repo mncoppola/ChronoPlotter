@@ -397,6 +397,7 @@ PowderTest::PowderTest ( QWidget *parent )
 	prevLabRadarDir = QDir::homePath();
 	prevMagnetoSpeedDir = QDir::homePath();
 	prevProChronoDir = QDir::homePath();
+	prevShotMarkerDir = QDir::homePath();
 	prevSaveDir = QDir::homePath();
 
 	/* Left panel */
@@ -427,6 +428,13 @@ PowderTest::PowderTest ( QWidget *parent )
 	pcFileButton->setMinimumHeight(50);
 	pcFileButton->setMaximumHeight(50);
 
+	QPushButton *smFileButton = new QPushButton("Select ShotMarker file");
+	connect(smFileButton, SIGNAL(clicked(bool)), this, SLOT(selectShotMarkerFile(bool)));
+	smFileButton->setMinimumWidth(300);
+	smFileButton->setMaximumWidth(300);
+	smFileButton->setMinimumHeight(50);
+	smFileButton->setMaximumHeight(50);
+
 	QPushButton *manualEntryButton = new QPushButton("Manual data entry");
 	connect(manualEntryButton, SIGNAL(clicked(bool)), this, SLOT(manualDataEntry(bool)));
 	manualEntryButton->setMinimumWidth(300);
@@ -444,6 +452,8 @@ PowderTest::PowderTest ( QWidget *parent )
 	placeholderLayout->setAlignment(msFileButton, Qt::AlignCenter);
 	placeholderLayout->addWidget(pcFileButton);
 	placeholderLayout->setAlignment(pcFileButton, Qt::AlignCenter);
+	placeholderLayout->addWidget(smFileButton);
+	placeholderLayout->setAlignment(smFileButton, Qt::AlignCenter);
 	placeholderLayout->addWidget(manualEntryButton);
 	placeholderLayout->setAlignment(manualEntryButton, Qt::AlignCenter);
 	placeholderLayout->addStretch(0);
@@ -2928,6 +2938,258 @@ QList<ChronoSeries *> PowderTest::ExtractProChronoSeries ( QTextStream &csv )
 	{
 		ChronoSeries *series = allSeries.at(i);
 		series->seriesNum = seriesNum;
+		seriesNum++;
+	}
+
+	return allSeries;
+}
+
+void PowderTest::selectShotMarkerFile ( bool state )
+{
+	qDebug() << "selectShotMarkerFile state =" << state;
+
+	qDebug() << "Previous directory:" << prevShotMarkerDir;
+
+	QString path = QFileDialog::getOpenFileName(this, "Select file", prevShotMarkerDir, "ShotMarker files (*.tar)");
+	prevShotMarkerDir = path;
+
+	qDebug() << "Selected file:" << path;
+
+	if ( path.isEmpty() )
+	{
+		qDebug() << "User didn't select a file, bail";
+		return;
+	}
+
+	seriesData.clear();
+
+	/*
+	 * ShotMarker only records velocity data in .tar export files
+	 */
+
+	QList<ChronoSeries *> allSeries;
+
+	if ( path.endsWith(".tar") )
+	{
+		qDebug() << "ShotMarker .tar bundle";
+
+		allSeries = ExtractShotMarkerSeriesTar(path);
+	}
+	else
+	{
+		qDebug() << "ShotMarker .csv export, bailing";
+
+		QMessageBox *msg = new QMessageBox();
+		msg->setIcon(QMessageBox::Critical);
+		msg->setText(QString("Only ShotMarker .tar files are supported for velocity data.\n\nSelected: '%1'").arg(path));
+		msg->setWindowTitle("Error");
+		msg->exec();
+
+		return;
+	}
+
+	qDebug() << "Got allSeries with size" << allSeries.size();
+
+	if ( ! allSeries.empty() )
+	{
+		qDebug() << "Detected ShotMarker file";
+
+		for ( int i = 0; i < allSeries.size(); i++ )
+		{
+			ChronoSeries *series = allSeries.at(i);
+
+			series->enabled = new QCheckBox();
+			series->enabled->setChecked(true);
+
+			series->chargeWeight = new QDoubleSpinBox();
+			series->chargeWeight->setDecimals(2);
+			series->chargeWeight->setSingleStep(0.1);
+			series->chargeWeight->setMinimumWidth(100);
+			series->chargeWeight->setMaximumWidth(100);
+
+			seriesData.append(series);
+		}
+	}
+
+	/* We're finished parsing the file */
+
+	if ( seriesData.empty() )
+	{
+		qDebug() << "Didn't find any shot data in this file, bail";
+
+		QMessageBox *msg = new QMessageBox();
+		msg->setIcon(QMessageBox::Critical);
+		msg->setText(QString("Unable to find ShotMarker data in '%1'").arg(path));
+		msg->setWindowTitle("Error");
+		msg->exec();
+	}
+	else
+	{
+		qDebug() << "Detected ShotMarker file" << path;
+
+		QMessageBox *msg = new QMessageBox();
+		msg->setIcon(QMessageBox::Information);
+		msg->setText(QString("Detected ShotMarker data\n\nUsing '%1'").arg(path));
+		msg->setWindowTitle("Success");
+		msg->exec();
+
+		// Proceed to display the data
+		DisplaySeriesData();
+	}
+}
+
+QList<ChronoSeries *> PowderTest::ExtractShotMarkerSeriesTar ( QString path )
+{
+	QList<ChronoSeries *> allSeries;
+	ChronoSeries *curSeries = new ChronoSeries();
+	QTemporaryDir tempDir;
+	int ret;
+
+	if ( ! tempDir.isValid() )
+	{
+		qDebug() << "Temp directory is NOT valid";
+	}
+
+	qDebug() << "Temporary directory:" << tempDir.path();
+
+	/*
+	 * ShotMarker .tar files contain one .z file for each string being exported.
+	 * Each .z file is a zlib-compressed JSON file containing shot data for that string.
+	 */
+
+	QFile rf(path);
+	if ( ! rf.open(QIODevice::ReadOnly) )
+	{
+		qDebug() << "Failed to open ShotMarker .tar file:" << path;
+		return allSeries;
+	}
+
+	ret = untar(rf, tempDir.path());
+	if ( ret )
+	{
+		qDebug() << "Error while extracting ShotMarker .tar file:" << path;
+		return allSeries;
+	}
+
+	/*
+	 * We have a temp directory with our extracted files in it. Now iterate over each .z
+	 * file and decompress it.
+	 */
+
+	QDir dir(tempDir.path());
+	QStringList stringFiles = dir.entryList(QStringList() << "*.z", QDir::Files);
+
+	qDebug() << "iterating over files:";
+	int seriesNum = 1;
+	foreach ( QString filename, stringFiles )
+	{
+		QString path(tempDir.path());
+		path.append("/");
+		path.append(filename);
+		qDebug() << path;
+
+
+		QFile file(path);
+		file.open(QIODevice::ReadOnly);
+		QByteArray buf = file.readAll();
+		qDebug() << "file:" << path << ", size:" << buf.size();
+
+		// 1mb ought to be enough for anybody!
+		unsigned char *destBuf = (unsigned char *)malloc(1024 * 1024);
+		qDebug() << "malloc returned" << (void *)destBuf;
+		if ( destBuf == NULL )
+		{
+			qDebug() << "malloc returned NULL! skipping... but we should really throw an exception here.";
+			continue;
+		}
+
+		mz_ulong uncomp_len = 1024 * 1024;
+		qDebug() << "calling uncompress 1 with destBuf=" << (void *)destBuf << ", uncomp_len=" << uncomp_len << ", buf.data()=" << buf.data() << ", buf.size()=" << buf.size();
+		ret = uncompress(destBuf, &uncomp_len, (const unsigned char *)buf.data(), buf.size());
+
+		qDebug() << "output size:" << uncomp_len;
+		if ( ret != MZ_OK )
+		{
+			qDebug() << "Failed to uncompress, skipping..." << path;
+			free(destBuf);
+			continue;
+		}
+
+		//qDebug() << "calling uncompress 2 with destBuf=" << (void *)destBuf << ", uncomp_len=" << uncomp_len << ", buf.data()=" << buf.data() << ", buf.size()=" << buf.size();
+		//uncompress(destBuf, &uncomp_len, (const unsigned char *)buf.data(), buf.size());
+		QByteArray ba = QByteArray::fromRawData((const char *)destBuf, uncomp_len);
+		//qDebug() << "decompressed" << uncomp_len << ":" << ba;
+
+		QJsonParseError parseError;
+		QJsonDocument jsonDoc;
+		jsonDoc = QJsonDocument::fromJson(ba, &parseError);
+
+		if ( parseError.error != QJsonParseError::NoError )
+		{
+			qDebug() << "JSON parse error, skipping... at" << parseError.offset << ":" << parseError.errorString();
+			free(destBuf);
+			continue;
+		}
+
+		QJsonObject jsonObj = jsonDoc.object();
+
+		/* We have a JSON file containing a single series */
+
+		qDebug() << "Beginning new series";
+
+		curSeries = new ChronoSeries();
+		curSeries->isValid = false;
+		curSeries->seriesNum = seriesNum;
+		qDebug() << "name =" << jsonObj["name"].toString();
+		curSeries->name = new QLabel(jsonObj["name"].toString());
+		curSeries->velocityUnits = "ft/s";
+		curSeries->deleted = false;
+		QDateTime dateTime;
+		dateTime.setMSecsSinceEpoch(jsonObj["ts"].toVariant().toULongLong());
+		curSeries->firstDate = dateTime.date().toString(Qt::TextDate);
+		curSeries->firstTime = dateTime.time().toString(Qt::TextDate);
+
+		qDebug() << "setting date =" << curSeries->firstDate << " time =" << curSeries->firstTime << "from ts" << jsonObj["ts"].toVariant().toULongLong();
+
+		foreach ( const QJsonValue& shot, jsonObj["shots"].toArray() )
+		{
+			// convert from m/s to ft/s
+			int velocity = shot["v"].toDouble() * 1.0936133 * 3; // the result is cast to an int
+
+			if ( shot["hidden"].toBool() )
+			{
+				// hidden shot
+
+				qDebug() << "ignoring hidden shot" << shot["display_text"];
+			}
+			else if ( shot["sighter"].toBool() )
+			{
+				// sighter shot
+
+				qDebug() << "ignoring sighter shot" << shot["display_text"];
+			}
+			else
+			{
+				// shot for record
+
+				qDebug() << "adding velocity" << velocity << "from m/s:" << shot["v"].toDouble();
+				curSeries->muzzleVelocities.append(velocity);
+			}
+
+		}
+
+		// Finish parsing the current series.
+		qDebug() << "End of JSON";
+
+		if ( curSeries->muzzleVelocities.size() > 0 )
+		{
+			qDebug() << "Adding curSeries to allSeries";
+
+			allSeries.append(curSeries);
+		}
+
+		free(destBuf);
+
 		seriesNum++;
 	}
 
