@@ -520,7 +520,7 @@ PowderTest::PowderTest ( QWidget *parent )
 	xAxisSpacing = new QComboBox();
 	xAxisSpacing->addItem("Proportional");
 	xAxisSpacing->addItem("Constant");
-	connect(xAxisSpacing, SIGNAL(activated(int)), this, SLOT(xAxisSpacingChanged(int)));
+	connect(xAxisSpacing, SIGNAL(currentIndexChanged(int)), this, SLOT(xAxisSpacingChanged(int)));
 	optionsFormLayout->addRow(new QLabel("X-axis spacing:"), xAxisSpacing);
 
 	optionsLayout->addLayout(optionsFormLayout);
@@ -4309,7 +4309,7 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 	xAxisSpacing = new QComboBox();
 	xAxisSpacing->addItem("Proportional");
 	xAxisSpacing->addItem("Constant");
-	connect(xAxisSpacing, SIGNAL(activated(int)), this, SLOT(xAxisSpacingChanged(int)));
+	connect(xAxisSpacing, SIGNAL(currentIndexChanged(int)), this, SLOT(xAxisSpacingChanged(int)));
 	optionsFormLayout->addRow(new QLabel("X-axis spacing:"), xAxisSpacing);
 
 	optionsLayout->addLayout(optionsFormLayout);
