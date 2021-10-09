@@ -1456,6 +1456,46 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 
 	std::sort(seriesToGraph.begin(), seriesToGraph.end(), ChargeWeightComparator);
 
+	/* Check if any cartridge lengths are duplicated. We can rely on series being sorted and not zero. */
+
+	if ( xAxisSpacing->currentIndex() == PROPORTIONAL )
+	{
+		double lastChargeWeight = 0;
+		for ( int i = 0; i < seriesToGraph.size(); i++ )
+		{
+			ChronoSeries *series = seriesToGraph.at(i);
+
+			double chargeWeight = series->chargeWeight->value();
+
+			if ( chargeWeight == lastChargeWeight )
+			{
+				qDebug() << "Duplicate charge weight detected" << chargeWeight << ", prompting user to switch to constant x-axis spacing";
+
+				QMessageBox::StandardButton reply;
+				reply = QMessageBox::question(this, "Duplicate charge weights", "Duplicate charge weights detected. Switching graph to constant spacing mode.", QMessageBox::Ok | QMessageBox::Cancel);
+
+				if ( reply == QMessageBox::Ok )
+				{
+					qDebug() << "Set x-axis spacing to constant";
+
+					xAxisSpacing->setCurrentIndex(CONSTANT);
+					break;
+				}
+				else
+				{
+					qDebug() << "User cancel, bailing out";
+					return;
+				}
+			}
+
+			lastChargeWeight = chargeWeight;
+		}
+	}
+	else
+	{
+		qDebug() << "Constant x-axis spacing selected, skipping duplicate check";
+	}
+
 	/* Collect the data to graph */
 
 	QSharedPointer<QCPAxisTickerText> textTicker(new QCPAxisTickerText);
@@ -4849,6 +4889,46 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 	/* Sort the data by cartridge length (not that length matters...) in case the user inputted lengths out of order */
 
 	std::sort(seriesToGraph.begin(), seriesToGraph.end(), CartridgeLengthComparator);
+
+	/* Check if any cartridge lengths are duplicated. We can rely on series being sorted and not zero. */
+
+	if ( xAxisSpacing->currentIndex() == PROPORTIONAL )
+	{
+		double lastCartridgeLength = 0;
+		for ( int i = 0; i < seriesToGraph.size(); i++ )
+		{
+			SeatingSeries *series = seriesToGraph.at(i);
+
+			double cartridgeLength = series->cartridgeLength->value();
+
+			if ( cartridgeLength == lastCartridgeLength )
+			{
+				qDebug() << "Duplicate cartridge length detected" << cartridgeLength << ", prompting user to switch to constant x-axis spacing";
+
+				QMessageBox::StandardButton reply;
+				reply = QMessageBox::question(this, "Duplicate cartridge lengths", "Duplicate cartridge lengths detected. Switching graph to constant spacing mode.", QMessageBox::Ok | QMessageBox::Cancel);
+
+				if ( reply == QMessageBox::Ok )
+				{
+					qDebug() << "Set x-axis spacing to constant";
+
+					xAxisSpacing->setCurrentIndex(CONSTANT);
+					break;
+				}
+				else
+				{
+					qDebug() << "User cancel, bailing out";
+					return;
+				}
+			}
+
+			lastCartridgeLength = cartridgeLength;
+		}
+	}
+	else
+	{
+		qDebug() << "Constant x-axis spacing selected, skipping duplicate check";
+	}
 
 	/* Collect the data to graph */
 
