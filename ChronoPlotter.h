@@ -265,6 +265,7 @@ class PowderTest : public QWidget
 		ChronoSeries *ExtractLabRadarSeries ( QTextStream & );
 		QList<ChronoSeries *> ExtractMagnetoSpeedSeries ( QTextStream & );
 		QList<ChronoSeries *> ExtractProChronoSeries ( QTextStream & );
+		QList<ChronoSeries *> ExtractProChronoSeries_format2 ( QTextStream & );
 		QList<ChronoSeries *> ExtractShotMarkerSeriesTar ( QString );
 		void DisplaySeriesData ( void );
 		void renderGraph ( bool );

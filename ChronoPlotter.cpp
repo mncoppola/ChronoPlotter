@@ -2764,7 +2764,22 @@ void PowderTest::selectProChronoFile ( bool state )
 	csvFile.open(QIODevice::ReadOnly);
 	QTextStream csv(&csvFile);
 
-	QList<ChronoSeries *> allSeries = ExtractProChronoSeries(csv);
+	// Test which format this ProChrono file is
+	QString line = csv.readLine();
+	csv.seek(0);
+
+	QList<ChronoSeries *> allSeries;
+
+	if ( line.startsWith("Shot 1") )
+	{
+		qDebug() << "Detected ProChrono format 2";
+		allSeries = ExtractProChronoSeries_format2(csv);
+	}
+	else
+	{
+		qDebug() << "Detected ProChrono format 1";
+		allSeries = ExtractProChronoSeries(csv);
+	}
 
 	qDebug() << "Got allSeries from ExtractProChronoSeries with size" << allSeries.size();
 
@@ -2920,6 +2935,8 @@ QList<ChronoSeries *> PowderTest::ExtractProChronoSeries ( QTextStream &csv )
 				}
 			}
 		}
+
+		i++;
 	}
 
 	// End of the file. Finish parsing the current series.
@@ -2939,6 +2956,135 @@ QList<ChronoSeries *> PowderTest::ExtractProChronoSeries ( QTextStream &csv )
 	{
 		ChronoSeries *series = allSeries.at(i);
 		series->seriesNum = seriesNum;
+		seriesNum++;
+	}
+
+	return allSeries;
+}
+
+QList<ChronoSeries *> PowderTest::ExtractProChronoSeries_format2 ( QTextStream &csv )
+{
+	QList<ChronoSeries *> allSeries;
+	ChronoSeries *curSeries = new ChronoSeries();
+	curSeries->isValid = true;
+	curSeries->deleted = false;
+	curSeries->seriesNum = -1;
+	curSeries->velocityUnits = "ft/s";
+
+	/*
+	 * Users have reported an alternate CSV format exported by Digital Link where
+	 * shots are recorded as columns instead of rows
+	 *
+	 * To parse:
+	 *  - If cell 0 is a number, the row is a velocity record. Create a new series, count the number of columns, and import each shot.
+	 *  - Immediately on the next line, parse cell 0 as the first datetime.
+	 */
+
+	int i = 0;
+	while ( ! csv.atEnd() )
+	{
+		QString line = csv.readLine();
+
+		// ProChrono uses comma (,) as delimeter
+		QStringList rows(line.split(","));
+
+		// Trim whitespace from cells
+		QMutableStringListIterator it(rows);
+		while ( it.hasNext() )
+		{
+			it.next();
+			it.setValue(it.value().trimmed());
+		}
+
+		qDebug() << "Line" << i << ":" << rows;
+
+		if ( rows.at(0).contains("Shot") )
+		{
+			// skip column headers
+			qDebug() << "Skipping column headers";
+		}
+		else
+		{
+			// If cell is a valid integer, parse the row as velocity data
+
+			bool ok = false;
+			rows.at(0).toInt(&ok);
+			if ( ok )
+			{
+				// End the previous series (if necessary) and start a new one
+
+				if ( curSeries->muzzleVelocities.size() > 0 )
+				{
+					qDebug() << "Adding curSeries to allSeries";
+
+					allSeries.append(curSeries);
+				}
+
+				qDebug() << "Beginning new series";
+
+				curSeries = new ChronoSeries();
+				curSeries->isValid = true;
+				curSeries->deleted = false;
+				curSeries->seriesNum = -1;
+				curSeries->velocityUnits = "ft/s";
+
+				// Series in the file are recorded newest first. We'll iterate through and name them at the end.
+
+				for ( int j = 0; j < rows.size(); j++ )
+				{
+					bool ok = false;
+					int veloc = rows.at(j).toInt(&ok);
+
+					if ( ok )
+					{
+						curSeries->muzzleVelocities.append(rows.at(j).toInt());
+						qDebug() << "muzzleVelocities +=" << rows.at(j).toInt();
+					}
+					else
+					{
+						qDebug() << "Skipping velocity entry:" << rows.at(j);
+					}
+				}
+			}
+			else
+			{
+				QDateTime seriesDateTime;
+				seriesDateTime = QDateTime::fromString(rows.at(0), "M/d/yyyy hh:mm:ss");
+				if ( seriesDateTime.isValid() )
+				{
+					QStringList dateTime = rows.at(0).split(" ");
+					if ( dateTime.size() == 2 )
+					{
+						curSeries->firstDate = dateTime.at(0);
+						curSeries->firstTime = dateTime.at(1);
+						qDebug() << "firstDate =" << curSeries->firstDate;
+						qDebug() << "firstTime =" << curSeries->firstTime;
+					}
+				}
+			}
+		}
+
+		i++;
+	}
+
+	// End of the file. Finish parsing the current series.
+	qDebug() << "End of file";
+
+	if ( curSeries->muzzleVelocities.size() > 0 )
+	{
+		qDebug() << "Adding curSeries to allSeries";
+
+		allSeries.append(curSeries);
+	}
+
+	// ProChrono files list series in reverse order from newest to oldest. Iterate through and
+	// set the seriesNum's and names accordingly.
+	int seriesNum = 1;
+	for ( i = allSeries.size() - 1; i >= 0; i-- )
+	{
+		ChronoSeries *series = allSeries.at(i);
+		series->seriesNum = seriesNum;
+		series->name = new QLabel(QString("Series %1").arg(seriesNum));
 		seriesNum++;
 	}
 
