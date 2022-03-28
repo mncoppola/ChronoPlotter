@@ -1,3 +1,5 @@
+#include <QFile>
+
 #ifndef UNTAR_H
 #define UNTAR_H
 int untar(QFile &, QString);
