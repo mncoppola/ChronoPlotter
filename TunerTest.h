@@ -12,7 +12,7 @@
 #include <QCheckBox>
 #include <QPushButton>
 #include <QStackedWidget>
-#include <QDoubleSpinBox>
+#include <QSpinBox>
 #include <QScrollArea>
 #include <QGridLayout>
 #include <QDialog>
@@ -21,9 +21,9 @@
 
 #include "ChronoPlotter.h"
 
-namespace SeatingDepth
+namespace Tuner
 {
-	struct SeatingSeries
+	struct TunerSeries
 	{
 		bool isValid;
 		int seriesNum;
@@ -43,7 +43,7 @@ namespace SeatingDepth
 		int targetDistance; // in yards
 		QString firstDate;
 		QString firstTime;
-		QDoubleSpinBox *cartridgeLength;
+		QSpinBox *tunerSetting;
 		QDoubleSpinBox *groupSize;
 		QLabel *groupSizeLabel;
 		QPushButton *deleteButton;
@@ -51,15 +51,14 @@ namespace SeatingDepth
 		bool deleted;
 	};
 
-	class SeatingDepthTest : public QWidget
+	class TunerTest : public QWidget
 	{
 		Q_OBJECT
 
 		public:
-			SeatingDepthTest(QWidget *parent = 0);
-			~SeatingDepthTest() {};
-			QList<SeatingSeries *> seatingSeriesData;
-			QComboBox *cartridgeUnits;
+			TunerTest(QWidget *parent = 0);
+			~TunerTest() {};
+			QList<TunerSeries *> tunerSeriesData;
 
 		public slots:
 			void groupSizeCheckBoxChanged(bool);
@@ -67,7 +66,6 @@ namespace SeatingDepth
 			void trendCheckBoxChanged(bool);
 			void includeSightersCheckBoxChanged(bool);
 			void xAxisSpacingChanged(int);
-			void cartridgeMeasurementTypeChanged(int);
 			void groupMeasurementTypeChanged(int);
 			void importedGroupMeasurementTypeChanged(int);
 			void importedGroupUnitsChanged(int);
@@ -92,8 +90,8 @@ namespace SeatingDepth
 			static double pairSumX ( double, const QPair<double, double> );
 			static double pairSumY ( double, const QPair<double, double> );
 			double calculateMR ( QList<QPair<double, double> > );
-			QList<SeatingSeries *> ExtractShotMarkerSeriesTar ( QString );
-			QList<SeatingSeries *> ExtractShotMarkerSeriesCsv ( QTextStream & );
+			QList<TunerSeries *> ExtractShotMarkerSeriesTar ( QString );
+			QList<TunerSeries *> ExtractShotMarkerSeriesCsv ( QTextStream & );
 			void optionCheckBoxChanged(QCheckBox *, QLabel *, QComboBox *);
 			void DisplaySeriesData ( void );
 			void renderGraph ( bool );
@@ -106,7 +104,7 @@ namespace SeatingDepth
 			QWidget *scrollWidget;
 			QVBoxLayout *scrollLayout;
 			QScrollArea *scrollArea;
-			QGridLayout *seatingSeriesGrid;
+			QGridLayout *tunerSeriesGrid;
 			QLabel *headerLengthType;
 			QLabel *headerGroupType;
 			QLineEdit *graphTitle;
@@ -118,7 +116,6 @@ namespace SeatingDepth
 			QLineEdit *weather;
 			QLineEdit *distance;
 			QPushButton *addNewButton;
-			QComboBox *cartridgeMeasurementType;
 			QComboBox *groupMeasurementType;
 			QComboBox *groupUnits;
 			QComboBox *xAxisSpacing;
@@ -154,8 +151,8 @@ namespace SeatingDepth
 
 	struct AutofillValues
 	{
-		double startingLength;
-		double interval;
+		int startingSetting;
+		int interval;
 		bool increasing;
 	};
 
@@ -164,13 +161,13 @@ namespace SeatingDepth
 		Q_OBJECT
 
 		public:
-			AutofillDialog(SeatingDepthTest *, QDialog *parent = 0);
+			AutofillDialog(TunerTest *, QDialog *parent = 0);
 			~AutofillDialog() {};
 			AutofillValues *getValues();
 
 		private:
-			QDoubleSpinBox *startingLength;
-			QDoubleSpinBox *interval;
+			QSpinBox *startingSetting;
+			QSpinBox *interval;
 			QComboBox *direction;
 	};
 };

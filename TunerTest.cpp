@@ -1,11 +1,11 @@
 #include "untar.h"
 #include "miniz.h"
 #include "ChronoPlotter.h"
-#include "SeatingDepthTest.h"
+#include "TunerTest.h"
 
-using namespace SeatingDepth;
+using namespace Tuner;
 
-double SeatingDepthTest::calculateES ( QList<QPair<double, double> > coordinates )
+double TunerTest::calculateES ( QList<QPair<double, double> > coordinates )
 {
 	if ( coordinates.size() < 2 )
 	{
@@ -44,7 +44,7 @@ double SeatingDepthTest::calculateES ( QList<QPair<double, double> > coordinates
 	return extremeSpread;
 }
 
-double SeatingDepthTest::calculateXStdev ( QList<QPair<double, double> > coordinates )
+double TunerTest::calculateXStdev ( QList<QPair<double, double> > coordinates )
 {
 	if ( coordinates.size() < 2 )
 	{
@@ -60,7 +60,7 @@ double SeatingDepthTest::calculateXStdev ( QList<QPair<double, double> > coordin
 	return sampleStdev(xCoords);
 }
 
-double SeatingDepthTest::calculateYStdev ( QList<QPair<double, double> > coordinates )
+double TunerTest::calculateYStdev ( QList<QPair<double, double> > coordinates )
 {
 	if ( coordinates.size() < 2 )
 	{
@@ -76,7 +76,7 @@ double SeatingDepthTest::calculateYStdev ( QList<QPair<double, double> > coordin
 	return sampleStdev(yCoords);
 }
 
-double SeatingDepthTest::calculateRSD ( QList<QPair<double, double> > coordinates )
+double TunerTest::calculateRSD ( QList<QPair<double, double> > coordinates )
 {
 	if ( coordinates.size() < 2 )
 	{
@@ -96,17 +96,17 @@ double SeatingDepthTest::calculateRSD ( QList<QPair<double, double> > coordinate
 	return radialStdev;
 }
 
-double SeatingDepthTest::pairSumX ( double lhs, const QPair<double, double> rhs )
+double TunerTest::pairSumX ( double lhs, const QPair<double, double> rhs )
 {
 	return lhs + rhs.first;
 }
 
-double SeatingDepthTest::pairSumY ( double lhs, const QPair<double, double> rhs )
+double TunerTest::pairSumY ( double lhs, const QPair<double, double> rhs )
 {
 	return lhs + rhs.second;
 }
 
-double SeatingDepthTest::calculateMR ( QList<QPair<double, double> > coordinates )
+double TunerTest::calculateMR ( QList<QPair<double, double> > coordinates )
 {
 	double meanRadius = 0;
 
@@ -131,7 +131,7 @@ double SeatingDepthTest::calculateMR ( QList<QPair<double, double> > coordinates
 	return meanRadius;
 }
 
-void SeatingDepthTest::selectShotMarkerFile ( bool state )
+void TunerTest::selectShotMarkerFile ( bool state )
 {
 	qDebug() << "selectShotMarkerFile state =" << state;
 
@@ -148,13 +148,13 @@ void SeatingDepthTest::selectShotMarkerFile ( bool state )
 		return;
 	}
 
-	seatingSeriesData.clear();
+	tunerSeriesData.clear();
 
 	/*
 	 * ShotMarker records all of its series data in a single .CSV file
 	 */
 
-	QList<SeatingSeries *> allSeries;
+	QList<TunerSeries *> allSeries;
 
 	if ( path.endsWith(".tar") )
 	{
@@ -183,16 +183,14 @@ void SeatingDepthTest::selectShotMarkerFile ( bool state )
 
 		for ( int i = 0; i < allSeries.size(); i++ )
 		{
-			SeatingSeries *series = allSeries.at(i);
+			TunerSeries *series = allSeries.at(i);
 
 			series->enabled = new QCheckBox();
 			series->enabled->setChecked(true);
 
-			series->cartridgeLength = new QDoubleSpinBox();
-			series->cartridgeLength->setDecimals(3);
-			series->cartridgeLength->setSingleStep(0.001);
-			series->cartridgeLength->setMinimumWidth(100);
-			series->cartridgeLength->setMaximumWidth(100);
+			series->tunerSetting = new QSpinBox();
+			series->tunerSetting->setMinimumWidth(100);
+			series->tunerSetting->setMaximumWidth(100);
 
 			/*
 			 * ShotMarker internally records shot coordinates in millimeters (at least it appears to, from studying its file formats). String
@@ -346,13 +344,13 @@ void SeatingDepthTest::selectShotMarkerFile ( bool state )
 				qDebug() << "Series '" << series->name->text() << "' has ES" << series->extremeSpread << ", RSD" << series->radialStdev << ", and MR" << series->meanRadius << "at target distance" << series->targetDistance;
 			}
 
-			seatingSeriesData.append(series);
+			tunerSeriesData.append(series);
 		}
 	}
 
 	/* We're finished parsing the file */
 
-	if ( seatingSeriesData.empty() )
+	if ( tunerSeriesData.empty() )
 	{
 		qDebug() << "Didn't find any shot data in this file, bail";
 
@@ -380,10 +378,10 @@ void SeatingDepthTest::selectShotMarkerFile ( bool state )
 	}
 }
 
-QList<SeatingSeries *> SeatingDepthTest::ExtractShotMarkerSeriesTar ( QString path )
+QList<TunerSeries *> TunerTest::ExtractShotMarkerSeriesTar ( QString path )
 {
-	QList<SeatingSeries *> allSeries;
-	SeatingSeries *curSeries = new SeatingSeries();
+	QList<TunerSeries *> allSeries;
+	TunerSeries *curSeries = new TunerSeries();
 	QTemporaryDir tempDir;
 	int ret;
 
@@ -479,7 +477,7 @@ QList<SeatingSeries *> SeatingDepthTest::ExtractShotMarkerSeriesTar ( QString pa
 
 		qDebug() << "Beginning new series";
 
-		curSeries = new SeatingSeries();
+		curSeries = new TunerSeries();
 		curSeries->isValid = false;
 		curSeries->seriesNum = seriesNum;
 		qDebug() << "name =" << jsonObj["name"].toString();
@@ -551,10 +549,10 @@ QList<SeatingSeries *> SeatingDepthTest::ExtractShotMarkerSeriesTar ( QString pa
 	return allSeries;
 }
 
-QList<SeatingSeries *> SeatingDepthTest::ExtractShotMarkerSeriesCsv ( QTextStream &csv )
+QList<TunerSeries *> TunerTest::ExtractShotMarkerSeriesCsv ( QTextStream &csv )
 {
-	QList<SeatingSeries *> allSeries;
-	SeatingSeries *curSeries = new SeatingSeries();
+	QList<TunerSeries *> allSeries;
+	TunerSeries *curSeries = new TunerSeries();
 	curSeries->isValid = false;
 	curSeries->deleted = false;
 	curSeries->seriesNum = -1;
@@ -610,7 +608,7 @@ QList<SeatingSeries *> SeatingDepthTest::ExtractShotMarkerSeriesCsv ( QTextStrea
 
 				qDebug() << "Beginning new series";
 
-				curSeries = new SeatingSeries();
+				curSeries = new TunerSeries();
 				curSeries->isValid = false;
 				curSeries->seriesNum = seriesNum;
 				curSeries->name = new QLabel(rows.at(1) + QString(" (%1)").arg(rows.at(3)));
@@ -697,52 +695,30 @@ QList<SeatingSeries *> SeatingDepthTest::ExtractShotMarkerSeriesCsv ( QTextStrea
 	return allSeries;
 }
 
-AutofillDialog::AutofillDialog ( SeatingDepthTest *main, QDialog *parent )
+AutofillDialog::AutofillDialog ( TunerTest *main, QDialog *parent )
 	: QDialog(parent)
 {
 	qDebug() << "Autofill dialog";
 
-	setWindowTitle("Auto-fill cartridge lengths");
+	setWindowTitle("Auto-fill tuner settings");
 
 	QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
 	connect(buttonBox, &QDialogButtonBox::accepted, this, &AutofillDialog::accept);
 	connect(buttonBox, &QDialogButtonBox::rejected, this, &AutofillDialog::reject);
 
-	QLabel *lengthUnitsLabel;
-	if ( main->cartridgeUnits->currentIndex() == INCH )
-	{
-		lengthUnitsLabel = new QLabel("in");
-	}
-	else
-	{
-		lengthUnitsLabel = new QLabel("cm");
-	}
-
 	QFormLayout *formLayout = new QFormLayout();
 
-	startingLength = new QDoubleSpinBox();
-	startingLength->setDecimals(3);
-	startingLength->setSingleStep(0.001);
-	startingLength->setMinimumWidth(100);
-	startingLength->setMaximumWidth(100);
+	startingSetting = new QSpinBox();
+	startingSetting->setMinimumWidth(100);
+	startingSetting->setMaximumWidth(100);
 
-	QHBoxLayout *startingLengthLayout = new QHBoxLayout();
-	startingLengthLayout->addWidget(startingLength);
-	startingLengthLayout->addWidget(lengthUnitsLabel);
+	formLayout->addRow(new QLabel("Starting value:"), startingSetting);
 
-	formLayout->addRow(new QLabel("Starting value:"), startingLengthLayout);
-
-	interval = new QDoubleSpinBox();
-	interval->setDecimals(3);
-	interval->setSingleStep(0.001);
+	interval = new QSpinBox();
 	interval->setMinimumWidth(100);
 	interval->setMaximumWidth(100);
 
-	QHBoxLayout *intervalLayout = new QHBoxLayout();
-	intervalLayout->addWidget(interval);
-	intervalLayout->addWidget(new QLabel(lengthUnitsLabel));
-
-	formLayout->addRow(new QLabel("Interval:"), intervalLayout);
+	formLayout->addRow(new QLabel("Interval:"), interval);
 
 	direction = new QComboBox();
 	direction->addItem("Values increasing", QVariant(true));
@@ -752,7 +728,7 @@ AutofillDialog::AutofillDialog ( SeatingDepthTest *main, QDialog *parent )
 
 	formLayout->addRow(new QLabel("Direction:"), direction);
 
-	QLabel *label = new QLabel("Automatically fill in cartridge lengths for all enabled series, starting from the top of the list.\n");
+	QLabel *label = new QLabel("Automatically fill in tuner settings for all enabled series, starting from the top of the list.\n");
 	label->setWordWrap(true);
 
 	QVBoxLayout *layout = new QVBoxLayout();
@@ -768,14 +744,14 @@ AutofillDialog::AutofillDialog ( SeatingDepthTest *main, QDialog *parent )
 AutofillValues *AutofillDialog::getValues ( void )
 {
 	AutofillValues *values = new AutofillValues();
-	values->startingLength = startingLength->value();
+	values->startingSetting = startingSetting->value();
 	values->interval = interval->value();
 	values->increasing = direction->currentData().value<bool>();
 
 	return values;
 }
 
-void SeatingDepthTest::autofillClicked ( bool state )
+void TunerTest::autofillClicked ( bool state )
 {
 	qDebug() << "autofillClicked state =" << state;
 
@@ -790,22 +766,22 @@ void SeatingDepthTest::autofillClicked ( bool state )
 
 		AutofillValues *values = dialog->getValues();
 
-		double currentLength = values->startingLength;
+		int currentSetting = values->startingSetting;
 
-		for ( int i = 0; i < seatingSeriesData.size(); i++ )
+		for ( int i = 0; i < tunerSeriesData.size(); i++ )
 		{
-			SeatingSeries *series = seatingSeriesData.at(i);
+			TunerSeries *series = tunerSeriesData.at(i);
 			if ( (! series->deleted) && series->enabled->isChecked() )
 			{
-				qDebug() << "Setting series" << i << "to" << currentLength;
-				series->cartridgeLength->setValue(currentLength);
+				qDebug() << "Setting series" << i << "to" << currentSetting;
+				series->tunerSetting->setValue(currentSetting);
 				if ( values->increasing )
 				{
-					currentLength += values->interval;
+					currentSetting += values->interval;
 				}
 				else
 				{
-					currentLength -= values->interval;
+					currentSetting -= values->interval;
 				}
 			}
 		}
@@ -816,21 +792,21 @@ void SeatingDepthTest::autofillClicked ( bool state )
 	}
 }
 
-void SeatingDepthTest::addNewClicked ( bool state )
+void TunerTest::addNewClicked ( bool state )
 {
 	qDebug() << "addNewClicked state =" << state;
 
 	// un-bold the button after the first click
 	addNewButton->setStyleSheet("");
 
-	int numRows = seatingSeriesGrid->rowCount();
+	int numRows = tunerSeriesGrid->rowCount();
 
 	// Remove the stretch from the last row, we'll be using the row for our new series
-	seatingSeriesGrid->setRowStretch(numRows - 1, 0);
+	tunerSeriesGrid->setRowStretch(numRows - 1, 0);
 
 	qDebug() << "numRows =" << numRows;
 
-	SeatingSeries *series = new SeatingSeries();
+	TunerSeries *series = new TunerSeries();
 
 	series->deleted = false;
 
@@ -838,12 +814,12 @@ void SeatingDepthTest::addNewClicked ( bool state )
 	series->enabled->setChecked(true);
 
 	connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesManualCheckBoxChanged(int)));
-	seatingSeriesGrid->addWidget(series->enabled, numRows - 1, 0);
+	tunerSeriesGrid->addWidget(series->enabled, numRows - 1, 0);
 
 	int newSeriesNum = 1;
-	for ( int i = seatingSeriesData.size() - 1; i >= 0; i-- )
+	for ( int i = tunerSeriesData.size() - 1; i >= 0; i-- )
 	{
-		SeatingSeries *series = seatingSeriesData.at(i);
+		TunerSeries *series = tunerSeriesData.at(i);
 		if ( ! series->deleted )
 		{
 			newSeriesNum = series->seriesNum + 1;
@@ -855,18 +831,16 @@ void SeatingDepthTest::addNewClicked ( bool state )
 	series->seriesNum = newSeriesNum;
 
 	series->name = new QLabel(QString("Series %1").arg(newSeriesNum));
-	seatingSeriesGrid->addWidget(series->name, numRows - 1, 1);
+	tunerSeriesGrid->addWidget(series->name, numRows - 1, 1);
 
-	series->cartridgeLength = new QDoubleSpinBox();
-	series->cartridgeLength->setDecimals(3);
-	series->cartridgeLength->setSingleStep(0.001);
-	series->cartridgeLength->setMinimumWidth(100);
-	series->cartridgeLength->setMaximumWidth(100);
+	series->tunerSetting = new QSpinBox();
+	series->tunerSetting->setMinimumWidth(100);
+	series->tunerSetting->setMaximumWidth(100);
 
-	QHBoxLayout *cartridgeLengthLayout = new QHBoxLayout();
-	cartridgeLengthLayout->addWidget(series->cartridgeLength);
-	cartridgeLengthLayout->addStretch(0);
-	seatingSeriesGrid->addLayout(cartridgeLengthLayout, numRows - 1, 2);
+	QHBoxLayout *tunerSettingLayout = new QHBoxLayout();
+	tunerSettingLayout->addWidget(series->tunerSetting);
+	tunerSettingLayout->addStretch(0);
+	tunerSeriesGrid->addLayout(tunerSettingLayout, numRows - 1, 2);
 
 	series->groupSize = new QDoubleSpinBox();
 	series->groupSize->setDecimals(3);
@@ -877,21 +851,21 @@ void SeatingDepthTest::addNewClicked ( bool state )
 	QHBoxLayout *groupSizeLayout = new QHBoxLayout();
 	groupSizeLayout->addWidget(series->groupSize);
 	groupSizeLayout->addStretch(0);
-	seatingSeriesGrid->addLayout(groupSizeLayout, numRows - 1, 3);
+	tunerSeriesGrid->addLayout(groupSizeLayout, numRows - 1, 3);
 
 	series->deleteButton = new QPushButton();
 	connect(series->deleteButton, SIGNAL(clicked(bool)), this, SLOT(deleteClicked(bool)));
 	series->deleteButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
 	series->deleteButton->setFixedSize(series->deleteButton->minimumSizeHint());
-	seatingSeriesGrid->addWidget(series->deleteButton, numRows - 1, 4, Qt::AlignLeft);
+	tunerSeriesGrid->addWidget(series->deleteButton, numRows - 1, 4, Qt::AlignLeft);
 
-	seatingSeriesData.append(series);
+	tunerSeriesData.append(series);
 
 	// Add an empty stretch row at the end for proper spacing
-	seatingSeriesGrid->setRowStretch(numRows, 1);
+	tunerSeriesGrid->setRowStretch(numRows, 1);
 }
 
-void SeatingDepthTest::deleteClicked ( bool state )
+void TunerTest::deleteClicked ( bool state )
 {
 	QPushButton *deleteButton = qobject_cast<QPushButton *>(sender());
 
@@ -900,9 +874,9 @@ void SeatingDepthTest::deleteClicked ( bool state )
 	int newSeriesNum = -1;
 
 	// We have the checkbox object, now locate its row in the grid
-	for ( int i = 0; i < seatingSeriesData.size(); i++ )
+	for ( int i = 0; i < tunerSeriesData.size(); i++ )
 	{
-		SeatingSeries *series = seatingSeriesData.at(i);
+		TunerSeries *series = tunerSeriesData.at(i);
 		if ( deleteButton == series->deleteButton )
 		{
 			qDebug() << "Series" << series->seriesNum << "(" << series->name->text() << ") was deleted";
@@ -911,7 +885,7 @@ void SeatingDepthTest::deleteClicked ( bool state )
 
 			series->enabled->hide();
 			series->name->hide();
-			series->cartridgeLength->hide();
+			series->tunerSetting->hide();
 			series->groupSize->hide();
 			series->deleteButton->hide();
 
@@ -929,10 +903,10 @@ void SeatingDepthTest::deleteClicked ( bool state )
 	}
 }
 
-SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
+TunerTest::TunerTest ( QWidget *parent )
 	: QWidget(parent)
 {
-	qDebug() << "Seating depth test";
+	qDebug() << "Tuner test";
 
 	graphPreview = NULL;
 	prevShotMarkerDir = QDir::homePath();
@@ -978,10 +952,10 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 
 	QVBoxLayout *stackedLayout = new QVBoxLayout();
 	stackedLayout->addWidget(stackedWidget);
-	QGroupBox *seatingGroupBox = new QGroupBox("Seating depth data:");
-	seatingGroupBox->setLayout(stackedLayout);
+	QGroupBox *tunerGroupBox = new QGroupBox("Tuner data:");
+	tunerGroupBox->setLayout(stackedLayout);
 
-	leftLayout->addWidget(seatingGroupBox);
+	leftLayout->addWidget(tunerGroupBox);
 
 	/* Right panel */
 
@@ -1014,20 +988,6 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 	QVBoxLayout *optionsLayout = new QVBoxLayout();
 
 	QFormLayout *optionsFormLayout = new QFormLayout();
-
-	cartridgeMeasurementType = new QComboBox();
-	cartridgeMeasurementType->addItem("CBTO");
-	cartridgeMeasurementType->addItem("COAL");
-	connect(cartridgeMeasurementType, SIGNAL(activated(int)), this, SLOT(cartridgeMeasurementTypeChanged(int)));
-	optionsFormLayout->addRow(new QLabel("Cartridge measurement:"), cartridgeMeasurementType);
-
-	// create the header object that cartridgeMeasurementType controls
-	headerLengthType = new QLabel(cartridgeMeasurementType->currentText());
-
-	cartridgeUnits = new QComboBox();
-	cartridgeUnits->addItem("inches (in)");
-	cartridgeUnits->addItem("centimeters (cm)");
-	optionsFormLayout->addRow(new QLabel("Cartridge units:"), cartridgeUnits);
 
 	groupMeasurementType = new QComboBox();
 	groupMeasurementType->addItem("Extreme Spread (ES)");
@@ -1162,7 +1122,7 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 	this->setLayout(pageLayout);
 }
 
-void SeatingDepthTest::loadNewShotData ( bool state )
+void TunerTest::loadNewShotData ( bool state )
 {
 	qDebug() << "loadNewShotData state =" << state;
 
@@ -1177,7 +1137,7 @@ void SeatingDepthTest::loadNewShotData ( bool state )
 		stackedWidget->removeWidget(scrollWidget);
 
 		// Delete the loaded shot data
-		seatingSeriesData.clear();
+		tunerSeriesData.clear();
 
 		// Disconnect the group measurement type signal (used in imported data entry), if necessary
 		disconnect(groupMeasurementType, SIGNAL(activated(int)), this, SLOT(importedGroupMeasurementTypeChanged(int)));
@@ -1189,15 +1149,15 @@ void SeatingDepthTest::loadNewShotData ( bool state )
 	}
 }
 
-static bool SeatingSeriesComparator ( SeatingSeries *one, SeatingSeries *two )
+static bool TunerSeriesComparator ( TunerSeries *one, TunerSeries *two )
 {
 	return (one->seriesNum < two->seriesNum);
 }
 
-void SeatingDepthTest::DisplaySeriesData ( void )
+void TunerTest::DisplaySeriesData ( void )
 {
 	// Sort the list by series number
-	std::sort(seatingSeriesData.begin(), seatingSeriesData.end(), SeatingSeriesComparator);
+	std::sort(tunerSeriesData.begin(), tunerSeriesData.end(), TunerSeriesComparator);
 
 	// If we already have series data displayed, clear it out first. This call is a no-op if scrollWidget is not already added to stackedWidget.
 	stackedWidget->removeWidget(scrollWidget);
@@ -1207,13 +1167,13 @@ void SeatingDepthTest::DisplaySeriesData ( void )
 	// Wrap grid in a widget to make the grid scrollable
 	QWidget *scrollAreaWidget = new QWidget();
 
-	seatingSeriesGrid = new QGridLayout(scrollAreaWidget);
-	seatingSeriesGrid->setColumnStretch(0, 0);
-	seatingSeriesGrid->setColumnStretch(1, 1);
-	seatingSeriesGrid->setColumnStretch(2, 2);
-	seatingSeriesGrid->setColumnStretch(3, 3);
-	seatingSeriesGrid->setColumnStretch(4, 3);
-	seatingSeriesGrid->setHorizontalSpacing(25);
+	tunerSeriesGrid = new QGridLayout(scrollAreaWidget);
+	tunerSeriesGrid->setColumnStretch(0, 0);
+	tunerSeriesGrid->setColumnStretch(1, 1);
+	tunerSeriesGrid->setColumnStretch(2, 2);
+	tunerSeriesGrid->setColumnStretch(3, 3);
+	tunerSeriesGrid->setColumnStretch(4, 3);
+	tunerSeriesGrid->setHorizontalSpacing(25);
 
 	scrollArea = new QScrollArea();
 	scrollArea->setWidget(scrollAreaWidget);
@@ -1228,7 +1188,7 @@ void SeatingDepthTest::DisplaySeriesData ( void )
 	loadNewButton->setMinimumWidth(225);
 	loadNewButton->setMaximumWidth(225);
 
-	QPushButton *autofillButton = new QPushButton("Auto-fill cartridge lengths");
+	QPushButton *autofillButton = new QPushButton("Auto-fill tuner settings");
 	connect(autofillButton, SIGNAL(clicked(bool)), this, SLOT(autofillClicked(bool)));
 	autofillButton->setMinimumWidth(225);
 	autofillButton->setMaximumWidth(225);
@@ -1248,7 +1208,7 @@ void SeatingDepthTest::DisplaySeriesData ( void )
 	QCheckBox *headerCheckBox = new QCheckBox();
 	headerCheckBox->setChecked(true);
 	connect(headerCheckBox, SIGNAL(stateChanged(int)), this, SLOT(headerCheckBoxChanged(int)));
-	seatingSeriesGrid->addWidget(headerCheckBox, 0, 0);
+	tunerSeriesGrid->addWidget(headerCheckBox, 0, 0);
 
 	/*
 	 * Connect signals to update all calculations in the Group Size column when the user selects a new group measurement type (ES, RSD, MR, etc.) or
@@ -1261,46 +1221,47 @@ void SeatingDepthTest::DisplaySeriesData ( void )
 	/* Headers for series data */
 
 	QLabel *headerNumber = new QLabel("Series Name");
-	seatingSeriesGrid->addWidget(headerNumber, 0, 1, Qt::AlignVCenter);
+	tunerSeriesGrid->addWidget(headerNumber, 0, 1, Qt::AlignVCenter);
 
 	// these two objects were previously created
-	seatingSeriesGrid->addWidget(headerLengthType, 0, 2, Qt::AlignVCenter);
-	seatingSeriesGrid->addWidget(headerGroupType, 0, 3, Qt::AlignVCenter);
+	QLabel *headerTunerSetting = new QLabel("Tuner Setting");
+	tunerSeriesGrid->addWidget(headerTunerSetting, 0, 2, Qt::AlignVCenter);
+	tunerSeriesGrid->addWidget(headerGroupType, 0, 3, Qt::AlignVCenter);
 
 	QLabel *headerDate = new QLabel("Series Date");
-	seatingSeriesGrid->addWidget(headerDate, 0, 4, Qt::AlignVCenter);
+	tunerSeriesGrid->addWidget(headerDate, 0, 4, Qt::AlignVCenter);
 
-	for ( int i = 0; i < seatingSeriesData.size(); i++ )
+	for ( int i = 0; i < tunerSeriesData.size(); i++ )
 	{
-		SeatingSeries *series = seatingSeriesData.at(i);
+		TunerSeries *series = tunerSeriesData.at(i);
 
 		connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesCheckBoxChanged(int)));
 
-		seatingSeriesGrid->addWidget(series->enabled, i + 1, 0);
-		seatingSeriesGrid->addWidget(series->name, i + 1, 1, Qt::AlignVCenter);
+		tunerSeriesGrid->addWidget(series->enabled, i + 1, 0);
+		tunerSeriesGrid->addWidget(series->name, i + 1, 1, Qt::AlignVCenter);
 
-		QHBoxLayout *cartridgeLengthLayout = new QHBoxLayout();
-		cartridgeLengthLayout->addWidget(series->cartridgeLength);
-		cartridgeLengthLayout->addStretch(0);
-		seatingSeriesGrid->addLayout(cartridgeLengthLayout, i + 1, 2);
+		QHBoxLayout *tunerSettingLayout = new QHBoxLayout();
+		tunerSettingLayout->addWidget(series->tunerSetting);
+		tunerSettingLayout->addStretch(0);
+		tunerSeriesGrid->addLayout(tunerSettingLayout, i + 1, 2);
 
-		seatingSeriesGrid->addWidget(series->groupSizeLabel, i + 1, 3, Qt::AlignVCenter);
+		tunerSeriesGrid->addWidget(series->groupSizeLabel, i + 1, 3, Qt::AlignVCenter);
 
 		QLabel *datetimeLabel = new QLabel(QString("%1 %2").arg(series->firstDate).arg(series->firstTime));
-		seatingSeriesGrid->addWidget(datetimeLabel, i + 1, 4, Qt::AlignVCenter);
+		tunerSeriesGrid->addWidget(datetimeLabel, i + 1, 4, Qt::AlignVCenter);
 
-		seatingSeriesGrid->setRowMinimumHeight(0, series->cartridgeLength->sizeHint().height());
+		tunerSeriesGrid->setRowMinimumHeight(0, series->tunerSetting->sizeHint().height());
 	}
 
 	// Add an empty stretch row at the end for proper spacing
-	seatingSeriesGrid->setRowStretch(seatingSeriesData.size() + 1, 1);
+	tunerSeriesGrid->setRowStretch(tunerSeriesData.size() + 1, 1);
 
 	scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 	scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 	scrollArea->setWidgetResizable(true);
 }
 
-void SeatingDepthTest::manualDataEntry ( bool state )
+void TunerTest::manualDataEntry ( bool state )
 {
 	qDebug() << "manualDataEntry state =" << state;
 
@@ -1312,13 +1273,13 @@ void SeatingDepthTest::manualDataEntry ( bool state )
 	// Wrap grid in a widget to make the grid scrollable
 	QWidget *scrollAreaWidget = new QWidget();
 
-	seatingSeriesGrid = new QGridLayout(scrollAreaWidget);
-	seatingSeriesGrid->setColumnStretch(0, 0);
-	seatingSeriesGrid->setColumnStretch(1, 1);
-	seatingSeriesGrid->setColumnStretch(2, 2);
-	seatingSeriesGrid->setColumnStretch(3, 2);
-	seatingSeriesGrid->setColumnStretch(4, 3);
-	seatingSeriesGrid->setHorizontalSpacing(25);
+	tunerSeriesGrid = new QGridLayout(scrollAreaWidget);
+	tunerSeriesGrid->setColumnStretch(0, 0);
+	tunerSeriesGrid->setColumnStretch(1, 1);
+	tunerSeriesGrid->setColumnStretch(2, 2);
+	tunerSeriesGrid->setColumnStretch(3, 2);
+	tunerSeriesGrid->setColumnStretch(4, 3);
+	tunerSeriesGrid->setHorizontalSpacing(25);
 
 	scrollArea = new QScrollArea();
 	scrollArea->setWidget(scrollAreaWidget);
@@ -1339,7 +1300,7 @@ void SeatingDepthTest::manualDataEntry ( bool state )
 	loadNewButton->setMinimumWidth(225);
 	loadNewButton->setMaximumWidth(225);
 
-	QPushButton *autofillButton = new QPushButton("Auto-fill cartridge lengths");
+	QPushButton *autofillButton = new QPushButton("Auto-fill tuner settings");
 	connect(autofillButton, SIGNAL(clicked(bool)), this, SLOT(autofillClicked(bool)));
 	autofillButton->setMinimumWidth(225);
 	autofillButton->setMaximumWidth(225);
@@ -1360,15 +1321,16 @@ void SeatingDepthTest::manualDataEntry ( bool state )
 	QCheckBox *headerCheckBox = new QCheckBox();
 	headerCheckBox->setChecked(true);
 	connect(headerCheckBox, SIGNAL(stateChanged(int)), this, SLOT(headerCheckBoxChanged(int)));
-	seatingSeriesGrid->addWidget(headerCheckBox, 0, 0);
+	tunerSeriesGrid->addWidget(headerCheckBox, 0, 0);
 
 	/* Headers for series data */
 
 	QLabel *headerNumber = new QLabel("Series Name");
-	seatingSeriesGrid->addWidget(headerNumber, 0, 1, Qt::AlignVCenter);
+	tunerSeriesGrid->addWidget(headerNumber, 0, 1, Qt::AlignVCenter);
 
 	// this object was previously created
-	seatingSeriesGrid->addWidget(headerLengthType, 0, 2, Qt::AlignVCenter);
+	QLabel *headerTunerSetting = new QLabel("Tuner Setting");
+	tunerSeriesGrid->addWidget(headerTunerSetting, 0, 2, Qt::AlignVCenter);
 
 	const char *headerGroupType2;
 	if ( groupMeasurementType->currentIndex() == ES )
@@ -1393,13 +1355,13 @@ void SeatingDepthTest::manualDataEntry ( bool state )
 	}
 
 	headerGroupType = new QLabel(headerGroupType2);
-	seatingSeriesGrid->addWidget(headerGroupType, 0, 3, Qt::AlignVCenter);
+	tunerSeriesGrid->addWidget(headerGroupType, 0, 3, Qt::AlignVCenter);
 	QLabel *headerDelete = new QLabel("");
-	seatingSeriesGrid->addWidget(headerDelete, 0, 4, Qt::AlignVCenter);
+	tunerSeriesGrid->addWidget(headerDelete, 0, 4, Qt::AlignVCenter);
 
 	/* Create initial row */
 
-	SeatingSeries *series = new SeatingSeries();
+	TunerSeries *series = new TunerSeries();
 
 	series->deleted = false;
 
@@ -1407,23 +1369,21 @@ void SeatingDepthTest::manualDataEntry ( bool state )
 	series->enabled->setChecked(true);
 
 	connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesManualCheckBoxChanged(int)));
-	seatingSeriesGrid->addWidget(series->enabled, 1, 0);
+	tunerSeriesGrid->addWidget(series->enabled, 1, 0);
 
 	series->seriesNum = 1;
 
 	series->name = new QLabel("Series 1");
-	seatingSeriesGrid->addWidget(series->name, 1, 1);
+	tunerSeriesGrid->addWidget(series->name, 1, 1);
 
-	series->cartridgeLength = new QDoubleSpinBox();
-	series->cartridgeLength->setDecimals(3);
-	series->cartridgeLength->setSingleStep(0.001);
-	series->cartridgeLength->setMinimumWidth(100);
-	series->cartridgeLength->setMaximumWidth(100);
+	series->tunerSetting = new QSpinBox();
+	series->tunerSetting->setMinimumWidth(100);
+	series->tunerSetting->setMaximumWidth(100);
 
-	QHBoxLayout *cartridgeLengthLayout = new QHBoxLayout();
-	cartridgeLengthLayout->addWidget(series->cartridgeLength);
-	cartridgeLengthLayout->addStretch(0);
-	seatingSeriesGrid->addLayout(cartridgeLengthLayout, 1, 2);
+	QHBoxLayout *tunerSettingLayout = new QHBoxLayout();
+	tunerSettingLayout->addWidget(series->tunerSetting);
+	tunerSettingLayout->addStretch(0);
+	tunerSeriesGrid->addLayout(tunerSettingLayout, 1, 2);
 
 	series->groupSize = new QDoubleSpinBox();
 	series->groupSize->setDecimals(3);
@@ -1434,45 +1394,45 @@ void SeatingDepthTest::manualDataEntry ( bool state )
 	QHBoxLayout *groupSizeLayout = new QHBoxLayout();
 	groupSizeLayout->addWidget(series->groupSize);
 	groupSizeLayout->addStretch(0);
-	seatingSeriesGrid->addLayout(groupSizeLayout, 1, 3);
+	tunerSeriesGrid->addLayout(groupSizeLayout, 1, 3);
 
 	series->deleteButton = new QPushButton();
 	connect(series->deleteButton, SIGNAL(clicked(bool)), this, SLOT(deleteClicked(bool)));
 	series->deleteButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
 	series->deleteButton->setFixedSize(series->deleteButton->minimumSizeHint());
-	seatingSeriesGrid->addWidget(series->deleteButton, 1, 4, Qt::AlignLeft);
+	tunerSeriesGrid->addWidget(series->deleteButton, 1, 4, Qt::AlignLeft);
 
-	seatingSeriesGrid->setRowMinimumHeight(0, series->cartridgeLength->sizeHint().height());
+	tunerSeriesGrid->setRowMinimumHeight(0, series->tunerSetting->sizeHint().height());
 
-	seatingSeriesData.append(series);
+	tunerSeriesData.append(series);
 
 	// Add an empty stretch row at the end for proper spacing
-	seatingSeriesGrid->setRowStretch(seatingSeriesGrid->rowCount(), 1);
+	tunerSeriesGrid->setRowStretch(tunerSeriesGrid->rowCount(), 1);
 }
 
-void SeatingDepthTest::seriesCheckBoxChanged ( int state )
+void TunerTest::seriesCheckBoxChanged ( int state )
 {
 	QCheckBox *checkBox = qobject_cast<QCheckBox *>(sender());
 
 	qDebug() << "seriesCheckBoxChanged state =" << state;
 
 	// We have the checkbox object, now locate its row in the grid
-	for ( int i = 0; i < seatingSeriesGrid->rowCount() - 1; i++ )
+	for ( int i = 0; i < tunerSeriesGrid->rowCount() - 1; i++ )
 	{
-		QWidget *rowCheckBox = seatingSeriesGrid->itemAtPosition(i, 0)->widget();
+		QWidget *rowCheckBox = tunerSeriesGrid->itemAtPosition(i, 0)->widget();
 		if ( checkBox == rowCheckBox )
 		{
-			QWidget *seriesName = seatingSeriesGrid->itemAtPosition(i, 1)->widget();
-			QWidget *cartridgeLength = seatingSeriesGrid->itemAtPosition(i, 2)->layout()->itemAt(0)->widget();
-			QWidget *groupSizeLabel = seatingSeriesGrid->itemAtPosition(i, 3)->widget();
-			QWidget *seriesDate = seatingSeriesGrid->itemAtPosition(i, 4)->widget();
+			QWidget *seriesName = tunerSeriesGrid->itemAtPosition(i, 1)->widget();
+			QWidget *tunerSetting = tunerSeriesGrid->itemAtPosition(i, 2)->layout()->itemAt(0)->widget();
+			QWidget *groupSizeLabel = tunerSeriesGrid->itemAtPosition(i, 3)->widget();
+			QWidget *seriesDate = tunerSeriesGrid->itemAtPosition(i, 4)->widget();
 
 			if ( checkBox->isChecked() )
 			{
 				qDebug() << "Grid row" << i << "was checked";
 
 				seriesName->setEnabled(true);
-				cartridgeLength->setEnabled(true);
+				tunerSetting->setEnabled(true);
 				groupSizeLabel->setEnabled(true);
 				seriesDate->setEnabled(true);
 			}
@@ -1481,7 +1441,7 @@ void SeatingDepthTest::seriesCheckBoxChanged ( int state )
 				qDebug() << "Grid row" << i << "was unchecked";
 
 				seriesName->setEnabled(false);
-				cartridgeLength->setEnabled(false);
+				tunerSetting->setEnabled(false);
 				groupSizeLabel->setEnabled(false);
 				seriesDate->setEnabled(false);
 			}
@@ -1491,29 +1451,29 @@ void SeatingDepthTest::seriesCheckBoxChanged ( int state )
 	}
 }
 
-void SeatingDepthTest::seriesManualCheckBoxChanged ( int state )
+void TunerTest::seriesManualCheckBoxChanged ( int state )
 {
 	QCheckBox *checkBox = qobject_cast<QCheckBox *>(sender());
 
 	qDebug() << "seriesManualCheckBoxChanged state =" << state;
 
 	// We have the checkbox object, now locate its row in the grid
-	for ( int i = 0; i < seatingSeriesGrid->rowCount() - 1; i++ )
+	for ( int i = 0; i < tunerSeriesGrid->rowCount() - 1; i++ )
 	{
-		QWidget *rowCheckBox = seatingSeriesGrid->itemAtPosition(i, 0)->widget();
+		QWidget *rowCheckBox = tunerSeriesGrid->itemAtPosition(i, 0)->widget();
 		if ( checkBox == rowCheckBox )
 		{
-			QWidget *seriesName = seatingSeriesGrid->itemAtPosition(i, 1)->widget();
-			QWidget *cartridgeLength = seatingSeriesGrid->itemAtPosition(i, 2)->layout()->itemAt(0)->widget();
-			QWidget *groupSize = seatingSeriesGrid->itemAtPosition(i, 3)->layout()->itemAt(0)->widget();
-			QWidget *deleteButton = seatingSeriesGrid->itemAtPosition(i, 4)->widget();
+			QWidget *seriesName = tunerSeriesGrid->itemAtPosition(i, 1)->widget();
+			QWidget *tunerSetting = tunerSeriesGrid->itemAtPosition(i, 2)->layout()->itemAt(0)->widget();
+			QWidget *groupSize = tunerSeriesGrid->itemAtPosition(i, 3)->layout()->itemAt(0)->widget();
+			QWidget *deleteButton = tunerSeriesGrid->itemAtPosition(i, 4)->widget();
 
 			if ( checkBox->isChecked() )
 			{
 				qDebug() << "Grid row" << i << "was checked";
 
 				seriesName->setEnabled(true);
-				cartridgeLength->setEnabled(true);
+				tunerSetting->setEnabled(true);
 				groupSize->setEnabled(true);
 				deleteButton->setEnabled(true);;
 			}
@@ -1522,7 +1482,7 @@ void SeatingDepthTest::seriesManualCheckBoxChanged ( int state )
 				qDebug() << "Grid row" << i << "was unchecked";
 
 				seriesName->setEnabled(false);
-				cartridgeLength->setEnabled(false);
+				tunerSetting->setEnabled(false);
 				groupSize->setEnabled(false);
 				deleteButton->setEnabled(false);
 			}
@@ -1532,7 +1492,7 @@ void SeatingDepthTest::seriesManualCheckBoxChanged ( int state )
 	}
 }
 
-void SeatingDepthTest::headerCheckBoxChanged ( int state )
+void TunerTest::headerCheckBoxChanged ( int state )
 {
 	qDebug() << "headerCheckBoxChanged state =" << state;
 
@@ -1540,9 +1500,9 @@ void SeatingDepthTest::headerCheckBoxChanged ( int state )
 	{
 		qDebug() << "Header checkbox was checked";
 
-		for ( int i = 0; i < seatingSeriesGrid->rowCount() - 1; i++ )
+		for ( int i = 0; i < tunerSeriesGrid->rowCount() - 1; i++ )
 		{
-			QCheckBox *checkBox = qobject_cast<QCheckBox *>(seatingSeriesGrid->itemAtPosition(i, 0)->widget());
+			QCheckBox *checkBox = qobject_cast<QCheckBox *>(tunerSeriesGrid->itemAtPosition(i, 0)->widget());
 			if ( checkBox->isEnabled() )
 			{
 				checkBox->setChecked(true);
@@ -1553,9 +1513,9 @@ void SeatingDepthTest::headerCheckBoxChanged ( int state )
 	{
 		qDebug() << "Header checkbox was unchecked";
 
-		for ( int i = 0; i < seatingSeriesGrid->rowCount() - 1; i++ )
+		for ( int i = 0; i < tunerSeriesGrid->rowCount() - 1; i++ )
 		{
-			QCheckBox *checkBox = qobject_cast<QCheckBox *>(seatingSeriesGrid->itemAtPosition(i, 0)->widget());
+			QCheckBox *checkBox = qobject_cast<QCheckBox *>(tunerSeriesGrid->itemAtPosition(i, 0)->widget());
 			if ( checkBox->isEnabled() )
 			{
 				checkBox->setChecked(false);
@@ -1564,28 +1524,28 @@ void SeatingDepthTest::headerCheckBoxChanged ( int state )
 	}
 }
 
-void SeatingDepthTest::groupSizeCheckBoxChanged ( bool state )
+void TunerTest::groupSizeCheckBoxChanged ( bool state )
 {
 	qDebug() << "groupSizeCheckBoxChanged state =" << state;
 
 	optionCheckBoxChanged(groupSizeCheckBox, groupSizeLabel, groupSizeLocation);
 }
 
-void SeatingDepthTest::gsdCheckBoxChanged ( bool state )
+void TunerTest::gsdCheckBoxChanged ( bool state )
 {
 	qDebug() << "gsdCheckBoxChanged state =" << state;
 
 	optionCheckBoxChanged(gsdCheckBox, gsdLabel, gsdLocation);
 }
 
-void SeatingDepthTest::trendCheckBoxChanged ( bool state )
+void TunerTest::trendCheckBoxChanged ( bool state )
 {
 	qDebug() << "trendCheckBoxChanged state =" << state;
 
 	optionCheckBoxChanged(trendCheckBox, trendLabel, trendLineType);
 }
 
-void SeatingDepthTest::updateDisplayedData ( void )
+void TunerTest::updateDisplayedData ( void )
 {
 	// Update the series data to reflect any changes. The user could've either included/excluded sighters
 	// or changed the group measurement type.
@@ -1632,9 +1592,9 @@ void SeatingDepthTest::updateDisplayedData ( void )
 		groupUnits2 = "mil";
 	}
 
-	for ( int i = 0; i < seatingSeriesData.size(); i++ )
+	for ( int i = 0; i < tunerSeriesData.size(); i++ )
 	{
-		SeatingSeries *series = seatingSeriesData.at(i);
+		TunerSeries *series = tunerSeriesData.at(i);
 
 		double groupSize;
 		double groupSize_sighters;
@@ -1715,14 +1675,14 @@ void SeatingDepthTest::updateDisplayedData ( void )
 	}
 }
 
-void SeatingDepthTest::includeSightersCheckBoxChanged ( bool state )
+void TunerTest::includeSightersCheckBoxChanged ( bool state )
 {
 	qDebug() << "includeSightersCheckBoxChanged state =" << state;
 
 	updateDisplayedData();
 }
 
-void SeatingDepthTest::xAxisSpacingChanged ( int index )
+void TunerTest::xAxisSpacingChanged ( int index )
 {
 	qDebug() << "xAxisSpacingChanged index =" << index;
 
@@ -1742,7 +1702,7 @@ void SeatingDepthTest::xAxisSpacingChanged ( int index )
 }
 
 
-void SeatingDepthTest::optionCheckBoxChanged ( QCheckBox *checkBox, QLabel *label, QComboBox *comboBox )
+void TunerTest::optionCheckBoxChanged ( QCheckBox *checkBox, QLabel *label, QComboBox *comboBox )
 {
 	if ( checkBox->isChecked() )
 	{
@@ -1756,14 +1716,7 @@ void SeatingDepthTest::optionCheckBoxChanged ( QCheckBox *checkBox, QLabel *labe
 	}
 }
 
-void SeatingDepthTest::cartridgeMeasurementTypeChanged ( int index )
-{
-	qDebug() << "cartridgeMeasurementTypeChanged index =" << index;
-
-	headerLengthType->setText(cartridgeMeasurementType->currentText());
-}
-
-void SeatingDepthTest::groupMeasurementTypeChanged ( int index )
+void TunerTest::groupMeasurementTypeChanged ( int index )
 {
 	qDebug() << "groupMeasurementTypeChanged index =" << index;
 
@@ -1789,7 +1742,7 @@ void SeatingDepthTest::groupMeasurementTypeChanged ( int index )
 	}
 }
 
-void SeatingDepthTest::importedGroupMeasurementTypeChanged ( int index )
+void TunerTest::importedGroupMeasurementTypeChanged ( int index )
 {
 	qDebug() << "importedGroupMeasurementTypeChanged index =" << index;
 
@@ -1801,7 +1754,7 @@ void SeatingDepthTest::importedGroupMeasurementTypeChanged ( int index )
 	updateDisplayedData();
 }
 
-void SeatingDepthTest::importedGroupUnitsChanged ( int index )
+void TunerTest::importedGroupUnitsChanged ( int index )
 {
 	qDebug() << "importedGroupUnitsChanged index =" << index;
 
@@ -1813,7 +1766,7 @@ void SeatingDepthTest::importedGroupUnitsChanged ( int index )
 	updateDisplayedData();
 }
 
-void SeatingDepthTest::showGraph ( bool state )
+void TunerTest::showGraph ( bool state )
 {
 	qDebug() << "showGraph state =" << state;
 
@@ -1821,7 +1774,7 @@ void SeatingDepthTest::showGraph ( bool state )
 }
 
 
-void SeatingDepthTest::saveGraph ( bool state )
+void TunerTest::saveGraph ( bool state )
 {
 	qDebug() << "saveGraph state =" << state;
 
@@ -1999,36 +1952,26 @@ void QCPSmoothGraph::drawLinePlot(QCPPainter *painter, const QVector<QPointF> &l
   }
 }
 
-static bool CartridgeLengthComparator ( SeatingSeries *one, SeatingSeries *two )
+static bool TunerSettingComparator ( TunerSeries *one, TunerSeries *two )
 {
-	return (one->cartridgeLength->value() < two->cartridgeLength->value());
+	return (one->tunerSetting->value() < two->tunerSetting->value());
 }
 
-void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
+void TunerTest::renderGraph ( bool displayGraphPreview )
 {
 	qDebug() << "renderGraph displayGraphPreview =" << displayGraphPreview;
 
 	/* Validate series before continuing */
 
 	int numEnabled = 0;
-	for ( int i = 0; i < seatingSeriesData.size(); i++ )
+	for ( int i = 0; i < tunerSeriesData.size(); i++ )
 	{
-		SeatingSeries *series = seatingSeriesData.at(i);
+		TunerSeries *series = tunerSeriesData.at(i);
 		if ( (! series->deleted) && series->enabled->isChecked() )
 		{
 			numEnabled += 1;
 
-			if ( series->cartridgeLength->value() == 0 )
-			{
-				qDebug() << series->name->text() << "is missing cartridge length, bailing";
-
-				QMessageBox *msg = new QMessageBox();
-				msg->setIcon(QMessageBox::Critical);
-				msg->setText(QString("%1 is missing cartridge length!").arg(series->name->text()));
-				msg->setWindowTitle("Error");
-				msg->exec();
-				return;
-			}
+			// We don't check if tuner setting == 0 because 0 is a valid value
 
 			if ( series->groupSize && (series->groupSize->value() == 0) )
 			{
@@ -2063,10 +2006,10 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 
 	/* Make a copy of the subset of data actually being graphed */
 
-	QList<SeatingSeries *> seriesToGraph;
-	for ( int i = 0; i < seatingSeriesData.size(); i++ )
+	QList<TunerSeries *> seriesToGraph;
+	for ( int i = 0; i < tunerSeriesData.size(); i++ )
 	{
-		SeatingSeries *series = seatingSeriesData.at(i);
+		TunerSeries *series = tunerSeriesData.at(i);
 
 		if ( series->deleted )
 		{
@@ -2082,27 +2025,27 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 		}
 	}
 
-	/* Sort the data by cartridge length (not that length matters...) in case the user inputted lengths out of order */
+	/* Sort the data by tuner setting in case the user inputted values out of order */
 
-	std::sort(seriesToGraph.begin(), seriesToGraph.end(), CartridgeLengthComparator);
+	std::sort(seriesToGraph.begin(), seriesToGraph.end(), TunerSettingComparator);
 
-	/* Check if any cartridge lengths are duplicated. We can rely on series being sorted and not zero. */
+	/* Check if any tuner settings are duplicated. We can rely on series being sorted and not zero. */
 
 	if ( xAxisSpacing->currentIndex() == PROPORTIONAL )
 	{
-		double lastCartridgeLength = 0;
+		int lastTunerSetting = -1;
 		for ( int i = 0; i < seriesToGraph.size(); i++ )
 		{
-			SeatingSeries *series = seriesToGraph.at(i);
+			TunerSeries *series = seriesToGraph.at(i);
 
-			double cartridgeLength = series->cartridgeLength->value();
+			int tunerSetting = series->tunerSetting->value();
 
-			if ( cartridgeLength == lastCartridgeLength )
+			if ( tunerSetting == lastTunerSetting )
 			{
-				qDebug() << "Duplicate cartridge length detected" << cartridgeLength << ", prompting user to switch to constant x-axis spacing";
+				qDebug() << "Duplicate tuner setting detected" << tunerSetting << ", prompting user to switch to constant x-axis spacing";
 
 				QMessageBox::StandardButton reply;
-				reply = QMessageBox::question(this, "Duplicate cartridge lengths", "Duplicate cartridge lengths detected. Switching graph to constant spacing mode.", QMessageBox::Ok | QMessageBox::Cancel);
+				reply = QMessageBox::question(this, "Duplicate tuner settings", "Duplicate tuner settings detected. Switching graph to constant spacing mode.", QMessageBox::Ok | QMessageBox::Cancel);
 
 				if ( reply == QMessageBox::Ok )
 				{
@@ -2118,7 +2061,7 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 				}
 			}
 
-			lastCartridgeLength = cartridgeLength;
+			lastTunerSetting = tunerSetting;
 		}
 	}
 	else
@@ -2136,9 +2079,9 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 
 	for ( int i = 0; i < seriesToGraph.size(); i++ )
 	{
-		SeatingSeries *series = seriesToGraph.at(i);
+		TunerSeries *series = seriesToGraph.at(i);
 
-		double cartridgeLength = series->cartridgeLength->value();
+		int tunerSetting = series->tunerSetting->value();
 
 		double groupSize;
 		if ( series->groupSize )
@@ -2198,7 +2141,7 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 			}
 		}
 
-		qDebug() << QString("%1 - %2, %3").arg(series->name->text()).arg(cartridgeLength).arg(groupSize);
+		qDebug() << QString("%1 - %2, %3").arg(series->name->text()).arg(tunerSetting).arg(groupSize);
 		qDebug() << "";
 
 		/*
@@ -2210,23 +2153,23 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 		if ( xAxisSpacing->currentIndex() == CONSTANT )
 		{
 			xPoints.push_back(i);
-			textTicker->addTick(i, QString::number(cartridgeLength));
+			textTicker->addTick(i, QString::number(tunerSetting));
 		}
 		else
 		{
-			xPoints.push_back(cartridgeLength);
-			textTicker->addTick(cartridgeLength, QString::number(cartridgeLength));
+			xPoints.push_back(tunerSetting);
+			textTicker->addTick(tunerSetting, QString::number(tunerSetting));
 		}
 		yPoints.push_back(groupSize);
 	}
 
 	/* Create scatter plot */
 
-	QPen seatingLinePen(Qt::SolidLine);
-	QColor seatingLineColor("#1c57eb");
-	seatingLineColor.setAlphaF(0.65);
-	seatingLinePen.setColor(seatingLineColor);
-	seatingLinePen.setWidthF(1.5);
+	QPen tunerLinePen(Qt::SolidLine);
+	QColor tunerLineColor("#1c57eb");
+	tunerLineColor.setAlphaF(0.65);
+	tunerLinePen.setColor(tunerLineColor);
+	tunerLinePen.setWidthF(1.5);
 
 	QCPSmoothGraph *scatterPlot = new QCPSmoothGraph(customPlot->xAxis, customPlot->yAxis);
 	scatterPlot->setName(QLatin1String("Graph ")+QString::number(customPlot->graphCount()));
@@ -2234,7 +2177,7 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 	scatterPlot->setData(xPoints, yPoints);
 	scatterPlot->rescaleAxes();
 	scatterPlot->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssDisc, QColor("#0536b0"), 6.0));
-	scatterPlot->setPen(seatingLinePen);
+	scatterPlot->setPen(tunerLinePen);
 
 	/* Draw trend line if necessary */
 
@@ -2283,26 +2226,6 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 	}
 
 	/* Configure rest of the graph */
-
-	const char *cartridgeMeasurementType2;
-	if ( cartridgeMeasurementType->currentIndex() == CBTO )
-	{
-		cartridgeMeasurementType2 = "CBTO";
-	}
-	else
-	{
-		cartridgeMeasurementType2 = "COAL";
-	}
-
-	const char *cartridgeUnits2;
-	if ( cartridgeUnits->currentIndex() == INCH )
-	{
-		cartridgeUnits2 = "in";
-	}
-	else
-	{
-		cartridgeUnits2 = "cm";
-	}
 
 	const char *groupMeasurementType2;
 	if ( groupMeasurementType->currentIndex() == ES )
@@ -2367,7 +2290,7 @@ void SeatingDepthTest::renderGraph ( bool displayGraphPreview )
 	axisBasePen.setColor("#d9d9d9");
 	axisBasePen.setWidth(2);
 
-	customPlot->xAxis->setLabel(QString("%1 (%2)").arg(cartridgeMeasurementType2).arg(cartridgeUnits2));
+	customPlot->xAxis->setLabel("Tuner Setting");
 	customPlot->xAxis->scaleRange(1.1);
 	customPlot->xAxis->setTicker(textTicker);
 	customPlot->xAxis->setTickLabelFont(QFont("DejaVu Sans", scaleFontSize(9)));

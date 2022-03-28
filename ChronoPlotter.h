@@ -59,6 +59,17 @@
 
 int scaleFontSize ( int );
 
+struct SplineSet
+{
+	double a;
+	double b;
+	double c;
+	double d;
+	double x;
+};
+
+std::vector<SplineSet> spline(QVector<double> &x, QVector<double> &y);
+
 std::vector<double> GetLinearFit( QVector<double>&, QVector<double>& );
 
 QString StringListJoin ( QStringList, const char * );

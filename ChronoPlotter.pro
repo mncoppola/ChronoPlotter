@@ -7,8 +7,8 @@ TARGET = ChronoPlotter
 INCLUDEPATH += .
 
 # Input
-HEADERS += ChronoPlotter.h qcustomplot/qcustomplot.h untar.h miniz.h PowderTest.h SeatingDepthTest.h About.h
-SOURCES += ChronoPlotter.cpp qcustomplot/qcustomplot.cpp untar.cpp miniz.c PowderTest.cpp SeatingDepthTest.cpp About.cpp
+HEADERS += ChronoPlotter.h qcustomplot/qcustomplot.h untar.h miniz.h PowderTest.h SeatingDepthTest.h TunerTest.h About.h
+SOURCES += ChronoPlotter.cpp qcustomplot/qcustomplot.cpp untar.cpp miniz.c PowderTest.cpp SeatingDepthTest.cpp TunerTest.cpp About.cpp
 QT += widgets printsupport
 
 RESOURCES += resources.qrc
