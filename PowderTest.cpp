@@ -1260,7 +1260,7 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 			}
 			else
 			{
-				annotation = QString::number(mean, 'f', 1);
+				annotation = QString::number(mean);
 			}
 
 			if ( avgLocation->currentIndex() == ABOVE_STRING )
