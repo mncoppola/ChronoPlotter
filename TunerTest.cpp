@@ -370,6 +370,12 @@ void TunerTest::selectShotMarkerFile ( bool state )
 		msg->setWindowTitle("Success");
 		msg->exec();
 
+		// Connect and enable 'Include sighters' checkbox
+		connect(includeSightersCheckBox, SIGNAL(clicked(bool)), this, SLOT(importedGroupIncludeSightersCheckBoxChanged(bool)));
+
+		includeSightersCheckBox->setEnabled(true);
+		includeSightersLabel->setStyleSheet("");
+
 		// Proceed to display the data
 		DisplaySeriesData();
 
@@ -1084,10 +1090,11 @@ TunerTest::TunerTest ( QWidget *parent )
 	QHBoxLayout *includeSightersLayout = new QHBoxLayout();
 	includeSightersCheckBox = new QCheckBox();
 	includeSightersCheckBox->setChecked(false);
-	connect(includeSightersCheckBox, SIGNAL(clicked(bool)), this, SLOT(includeSightersCheckBoxChanged(bool)));
+	includeSightersCheckBox->setEnabled(false);
 	includeSightersLayout->addWidget(includeSightersCheckBox, 0);
-	QLabel *includeSightersLabel = new QLabel("Include sighters");
+	includeSightersLabel = new QLabel("Include sighters");
 	includeSightersLabel->setFixedHeight(trendLineType->sizeHint().height());
+	includeSightersLabel->setStyleSheet("color: #878787");
 	includeSightersLayout->addWidget(includeSightersLabel, 1);
 	optionsLayout->addLayout(includeSightersLayout);
 
@@ -1142,6 +1149,13 @@ void TunerTest::loadNewShotData ( bool state )
 		// Disconnect the group measurement type signal (used in imported data entry), if necessary
 		disconnect(groupMeasurementType, SIGNAL(activated(int)), this, SLOT(importedGroupMeasurementTypeChanged(int)));
 		disconnect(groupUnits, SIGNAL(activated(int)), this, SLOT(importedGroupUnitsChanged(int)));
+
+		// Disconnect and disable 'Include sighters' checkbox
+		disconnect(includeSightersCheckBox, SIGNAL(clicked(bool)), this, SLOT(importedGroupIncludeSightersCheckBoxChanged(bool)));
+
+		includeSightersCheckBox->setChecked(false);
+		includeSightersCheckBox->setEnabled(false);
+		includeSightersLabel->setStyleSheet("color: #878787");
 	}
 	else
 	{
@@ -1675,9 +1689,9 @@ void TunerTest::updateDisplayedData ( void )
 	}
 }
 
-void TunerTest::includeSightersCheckBoxChanged ( bool state )
+void TunerTest::importedGroupIncludeSightersCheckBoxChanged ( bool state )
 {
-	qDebug() << "includeSightersCheckBoxChanged state =" << state;
+	qDebug() << "importedGroupIncludeSightersCheckBoxChanged state =" << state;
 
 	updateDisplayedData();
 }

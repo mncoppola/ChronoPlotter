@@ -64,7 +64,7 @@ namespace Tuner
 			void groupSizeCheckBoxChanged(bool);
 			void gsdCheckBoxChanged(bool);
 			void trendCheckBoxChanged(bool);
-			void includeSightersCheckBoxChanged(bool);
+			void importedGroupIncludeSightersCheckBoxChanged(bool);
 			void xAxisSpacingChanged(int);
 			void groupMeasurementTypeChanged(int);
 			void importedGroupMeasurementTypeChanged(int);
@@ -129,6 +129,7 @@ namespace Tuner
 			QLabel *groupSizeLabel;
 			QLabel *gsdLabel;
 			QLabel *trendLabel;
+			QLabel *includeSightersLabel;
 	};
 
 	class QCPSmoothGraph : public QCPGraph

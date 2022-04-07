@@ -65,7 +65,7 @@ namespace SeatingDepth
 			void groupSizeCheckBoxChanged(bool);
 			void gsdCheckBoxChanged(bool);
 			void trendCheckBoxChanged(bool);
-			void includeSightersCheckBoxChanged(bool);
+			void importedGroupIncludeSightersCheckBoxChanged(bool);
 			void xAxisSpacingChanged(int);
 			void cartridgeMeasurementTypeChanged(int);
 			void groupMeasurementTypeChanged(int);
@@ -132,6 +132,7 @@ namespace SeatingDepth
 			QLabel *groupSizeLabel;
 			QLabel *gsdLabel;
 			QLabel *trendLabel;
+			QLabel *includeSightersLabel;
 	};
 
 	class QCPSmoothGraph : public QCPGraph
