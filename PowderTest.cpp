@@ -2955,7 +2955,9 @@ QList<ChronoSeries *> PowderTest::ExtractGarminSeries_xlsx ( QXlsx::Document &xl
 				// We found a row with an integer (shot ID) in the first column
 				
 				bool ok_veloc = false;
-				double veloc = worksheet->read(j, 2).toFloat(&ok_veloc);
+				QString veloc_str = worksheet->read(j, 2).toString();
+				veloc_str.replace(",", "."); // handle international-formatted numbers
+				double veloc = veloc_str.toFloat(&ok_veloc);
 				if ( ok_veloc )
 				{
 					curSeries->muzzleVelocities.append(veloc);
@@ -2987,13 +2989,13 @@ QList<ChronoSeries *> PowderTest::ExtractGarminSeries_xlsx ( QXlsx::Document &xl
 			}
 		}
 		
-		// We have a valid series CSV
-		curSeries->isValid = true;
+		if ( curSeries->muzzleVelocities.size() > 0 )
+		{
+			qDebug() << "Adding curSeries to allSeries";
+			curSeries->isValid = true;
 
-		qDebug() << "Adding curSeries to allSeries";
-		qDebug() << "";
-
-		allSeries.append(curSeries);
+			allSeries.append(curSeries);
+		}
 		
 		i += 1;
 	}
