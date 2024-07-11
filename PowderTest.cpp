@@ -418,6 +418,7 @@ void PowderTest::addNewClicked ( bool state )
 	series->chargeWeight = new QDoubleSpinBox();
 	series->chargeWeight->setDecimals(2);
 	series->chargeWeight->setSingleStep(0.1);
+	series->chargeWeight->setMaximum(1000000);
 	series->chargeWeight->setMinimumWidth(100);
 	series->chargeWeight->setMaximumWidth(100);
 
@@ -756,6 +757,7 @@ void PowderTest::manualDataEntry ( bool state )
 	series->chargeWeight = new QDoubleSpinBox();
 	series->chargeWeight->setDecimals(2);
 	series->chargeWeight->setSingleStep(0.1);
+	series->chargeWeight->setMaximum(1000000);
 	series->chargeWeight->setMinimumWidth(100);
 	series->chargeWeight->setMaximumWidth(100);
 
@@ -1814,6 +1816,7 @@ void PowderTest::selectLabRadarDirectory ( bool state )
 			series->chargeWeight = new QDoubleSpinBox();
 			series->chargeWeight->setDecimals(2);
 			series->chargeWeight->setSingleStep(0.1);
+			series->chargeWeight->setMaximum(1000000);
 			series->chargeWeight->setMinimumWidth(100);
 			series->chargeWeight->setMaximumWidth(100);
 
@@ -1967,6 +1970,7 @@ void PowderTest::selectMagnetoSpeedFile ( bool state )
 			series->chargeWeight = new QDoubleSpinBox();
 			series->chargeWeight->setDecimals(2);
 			series->chargeWeight->setSingleStep(0.1);
+			series->chargeWeight->setMaximum(1000000);
 			series->chargeWeight->setMinimumWidth(100);
 			series->chargeWeight->setMaximumWidth(100);
 
@@ -2223,6 +2227,7 @@ void PowderTest::selectProChronoFile ( bool state )
 			series->chargeWeight = new QDoubleSpinBox();
 			series->chargeWeight->setDecimals(2);
 			series->chargeWeight->setSingleStep(0.1);
+			series->chargeWeight->setMaximum(1000000);
 			series->chargeWeight->setMinimumWidth(100);
 			series->chargeWeight->setMaximumWidth(100);
 
@@ -2577,6 +2582,7 @@ void PowderTest::selectShotMarkerFile ( bool state )
 			series->chargeWeight = new QDoubleSpinBox();
 			series->chargeWeight->setDecimals(2);
 			series->chargeWeight->setSingleStep(0.1);
+			series->chargeWeight->setMaximum(1000000);
 			series->chargeWeight->setMinimumWidth(100);
 			series->chargeWeight->setMaximumWidth(100);
 
@@ -2847,6 +2853,7 @@ void PowderTest::selectGarminFile ( bool state )
 			series->chargeWeight = new QDoubleSpinBox();
 			series->chargeWeight->setDecimals(2);
 			series->chargeWeight->setSingleStep(0.1);
+			series->chargeWeight->setMaximum(1000000);
 			series->chargeWeight->setMinimumWidth(100);
 			series->chargeWeight->setMaximumWidth(100);
 
@@ -3268,6 +3275,7 @@ void PowderTest::rrClicked ( bool state )
 			newSeries->chargeWeight = new QDoubleSpinBox();
 			newSeries->chargeWeight->setDecimals(2);
 			newSeries->chargeWeight->setSingleStep(0.1);
+			newSeries->chargeWeight->setMaximum(1000000);
 			newSeries->chargeWeight->setMinimumWidth(100);
 			newSeries->chargeWeight->setMaximumWidth(100);
 
@@ -3312,6 +3320,7 @@ AutofillDialog::AutofillDialog ( PowderTest *main, QDialog *parent )
 	startingCharge = new QDoubleSpinBox();
 	startingCharge->setDecimals(2);
 	startingCharge->setSingleStep(0.1);
+	startingCharge->setMaximum(1000000);
 	startingCharge->setMinimumWidth(100);
 	startingCharge->setMaximumWidth(100);
 
@@ -3324,6 +3333,7 @@ AutofillDialog::AutofillDialog ( PowderTest *main, QDialog *parent )
 	interval = new QDoubleSpinBox();
 	interval->setDecimals(2);
 	interval->setSingleStep(0.1);
+	interval->setMaximum(1000000);
 	interval->setMinimumWidth(100);
 	interval->setMaximumWidth(100);
 
