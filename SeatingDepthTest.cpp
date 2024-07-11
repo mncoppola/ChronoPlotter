@@ -948,7 +948,7 @@ SeatingDepthTest::SeatingDepthTest ( QWidget *parent )
 
 	QVBoxLayout *leftLayout = new QVBoxLayout();
 
-	QLabel *selectLabel = new QLabel("Select input type\nto populate series data\n");
+	QLabel *selectLabel = new QLabel("Select e-target type:\n");
 	selectLabel->setAlignment(Qt::AlignCenter);
 
 	QPushButton *smFileButton = new QPushButton("Select ShotMarker file");
