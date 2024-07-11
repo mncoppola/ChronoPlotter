@@ -183,7 +183,7 @@ template<typename T>
 double sampleStdev ( T vals )
 {
 	int totalShots = vals.size();
-	double mean = std::accumulate(vals.begin(), vals.end(), 0LL) / static_cast<double>(totalShots);
+	double mean = std::accumulate(vals.begin(), vals.end(), 0.0) / static_cast<double>(totalShots);
 
 	double temp = 0;
 	for ( int i = 0; i < totalShots; i++ )

@@ -5,6 +5,13 @@
 #include "ChronoPlotter.h"
 #include "PowderTest.h"
 
+#include "xlsxdocument.h"
+#include "xlsxchartsheet.h"
+#include "xlsxcellrange.h"
+#include "xlsxchart.h"
+#include "xlsxrichstring.h"
+#include "xlsxworkbook.h"
+
 using namespace Powder;
 
 PowderTest::PowderTest ( QWidget *parent )
@@ -16,6 +23,7 @@ PowderTest::PowderTest ( QWidget *parent )
 	prevLabRadarDir = QDir::homePath();
 	prevMagnetoSpeedDir = QDir::homePath();
 	prevProChronoDir = QDir::homePath();
+	prevGarminDir = QDir::homePath();
 	prevShotMarkerDir = QDir::homePath();
 	prevSaveDir = QDir::homePath();
 
@@ -47,6 +55,13 @@ PowderTest::PowderTest ( QWidget *parent )
 	pcFileButton->setMinimumHeight(50);
 	pcFileButton->setMaximumHeight(50);
 
+	QPushButton *gFileButton = new QPushButton("Select Garmin CSV/XLSX file");
+	connect(gFileButton, SIGNAL(clicked(bool)), this, SLOT(selectGarminFile(bool)));
+	gFileButton->setMinimumWidth(300);
+	gFileButton->setMaximumWidth(300);
+	gFileButton->setMinimumHeight(50);
+	gFileButton->setMaximumHeight(50);
+
 	QPushButton *smFileButton = new QPushButton("Select ShotMarker file");
 	connect(smFileButton, SIGNAL(clicked(bool)), this, SLOT(selectShotMarkerFile(bool)));
 	smFileButton->setMinimumWidth(300);
@@ -71,6 +86,8 @@ PowderTest::PowderTest ( QWidget *parent )
 	placeholderLayout->setAlignment(msFileButton, Qt::AlignCenter);
 	placeholderLayout->addWidget(pcFileButton);
 	placeholderLayout->setAlignment(pcFileButton, Qt::AlignCenter);
+	placeholderLayout->addWidget(gFileButton);
+	placeholderLayout->setAlignment(gFileButton, Qt::AlignCenter);
 	placeholderLayout->addWidget(smFileButton);
 	placeholderLayout->setAlignment(smFileButton, Qt::AlignCenter);
 	placeholderLayout->addWidget(manualEntryButton);
@@ -338,8 +355,8 @@ void PowderTest::DisplaySeriesData ( void )
 		seriesGrid->addLayout(chargeWeightLayout, i + 1, 2);
 
 		int totalShots = series->muzzleVelocities.size();
-		int velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
-		int velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
+		double velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
+		double velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
 		QLabel *resultLabel = new QLabel(QString("%1 shot%2, %3-%4 %5").arg(totalShots).arg(totalShots > 1 ? "s" : "").arg(velocityMin).arg(velocityMax).arg(series->velocityUnits));
 		seriesGrid->addWidget(resultLabel, i + 1, 3, Qt::AlignVCenter);
 
@@ -508,9 +525,9 @@ void EnterVelocitiesDialog::textChanged ( )
 	velocitiesEntered->setText(QString("Velocities entered: %1").arg(numVelocities));
 }
 
-QList<int> EnterVelocitiesDialog::getValues ( void )
+QList<double> EnterVelocitiesDialog::getValues ( void )
 {
-	QList<int> values;
+	QList<double> values;
 
 	QStringList list = textEdit->toPlainText().split("\n");
 	qDebug() << list;
@@ -559,7 +576,7 @@ void PowderTest::enterDataClicked ( bool state )
 	{
 		qDebug() << "User OK'd dialog";
 
-		QList<int> values = dialog->getValues();
+		QList<double> values = dialog->getValues();
 
 		if ( values.size() == 0 )
 		{
@@ -589,8 +606,8 @@ void PowderTest::enterDataClicked ( bool state )
 
 				// Update the series result
 				int totalShots = series->muzzleVelocities.size();
-				int velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
-				int velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
+				double velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
+				double velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
 				series->result->setText(QString("%1 shot%2, %3-%4 %5").arg(totalShots).arg(totalShots > 1 ? "s" : "").arg(velocityMin).arg(velocityMax).arg(velocityUnits2));
 
 				break;
@@ -933,9 +950,10 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		double chargeWeight = series->chargeWeight->value();
 
 		qDebug() << QString("Series %1 (%2 gr)").arg(series->seriesNum).arg(chargeWeight);
+		qDebug() << series->muzzleVelocities;
 
 		int totalShots = series->muzzleVelocities.size();
-		double mean = std::accumulate(series->muzzleVelocities.begin(), series->muzzleVelocities.end(), 0LL) / static_cast<double>(totalShots);
+		double mean = std::accumulate(series->muzzleVelocities.begin(), series->muzzleVelocities.end(), 0.0) / static_cast<double>(totalShots);
 		double stdev = sampleStdev(series->muzzleVelocities);
 
 		qDebug() << "Total shots:" << totalShots;
@@ -1197,9 +1215,9 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		double chargeWeight = series->chargeWeight->value();
 
 		int totalShots = series->muzzleVelocities.size();
-		int velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
-		int velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
-		double mean = std::accumulate(series->muzzleVelocities.begin(), series->muzzleVelocities.end(), 0LL) / static_cast<double>(totalShots);
+		double velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
+		double velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
+		double mean = std::accumulate(series->muzzleVelocities.begin(), series->muzzleVelocities.end(), 0.0) / static_cast<double>(totalShots);
 		int es = velocityMax - velocityMin;
 		double stdev = sampleStdev(series->muzzleVelocities);
 		QStringList aboveAnnotationText;
@@ -1608,8 +1626,8 @@ void PowderTest::velocityUnitsChanged ( int index )
 			else
 			{
 				int totalShots = series->muzzleVelocities.size();
-				int velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
-				int velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
+				double velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
+				double velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
 				series->result->setText(QString("%1 shot%2, %3-%4 %5").arg(totalShots).arg(totalShots > 1 ? "s" : "").arg(velocityMin).arg(velocityMax).arg(velocityUnit));
 			}
 		}
@@ -2527,7 +2545,7 @@ void PowderTest::selectShotMarkerFile ( bool state )
 	if ( path.endsWith(".tar") )
 	{
 		qDebug() << "ShotMarker .tar bundle";
-
+	
 		allSeries = ExtractShotMarkerSeriesTar(path);
 	}
 	else
@@ -2751,6 +2769,386 @@ QList<ChronoSeries *> PowderTest::ExtractShotMarkerSeriesTar ( QString path )
 	return allSeries;
 }
 
+void PowderTest::selectGarminFile ( bool state )
+{
+	qDebug() << "selectGarminFile state =" << state;
+
+	qDebug() << "Previous directory:" << prevGarminDir;
+
+	QString path = QFileDialog::getOpenFileName(this, "Select file", prevGarminDir, "Garmin files (*.xlsx *.csv)");
+	prevGarminDir = path;
+
+	qDebug() << "Selected file:" << path;
+
+	if ( path.isEmpty() )
+	{
+		qDebug() << "User didn't select a file, bail";
+		return;
+	}
+
+	seriesData.clear();
+
+	/*
+	 * Garmin Xero C1 records its series data as CSV, XLSX, or FIT files. Garmin, seriously why is this such a mess.
+	 * CSV files contain a single series.
+	 * XLSX files contain one series per worksheet.
+	 * We don't currently support FIT files.
+	 */
+
+	QList<ChronoSeries *> allSeries;
+
+	if ( path.endsWith(".xlsx", Qt::CaseInsensitive) )
+	{
+		qDebug() << "Garmin XLSX file";
+	
+		QXlsx::Document xlsx(path);
+		xlsx.load();
+		
+		qDebug() << "Loaded xlsx doc. sheets: " << xlsx.sheetNames();
+		
+		allSeries = ExtractGarminSeries_xlsx(xlsx);
+	}
+	else if ( path.endsWith(".csv", Qt::CaseInsensitive) )
+	{
+		qDebug() << "Garmin CSV file";
+	
+		QFile csvFile(path);
+		csvFile.open(QIODevice::ReadOnly | QIODevice::Text);
+		QTextStream csv(&csvFile);
+		
+		allSeries = ExtractGarminSeries_csv(csv);
+	}
+	else
+	{
+		qDebug() << "Garmin unsupported file, bailing...";
+
+		QMessageBox *msg = new QMessageBox();
+		msg->setIcon(QMessageBox::Critical);
+		msg->setText(QString("Only Garmin .XLSX and .CSV files are supported.\n\nSelected: '%1'").arg(path));
+		msg->setWindowTitle("Error");
+		msg->exec();
+
+		return;
+	}
+
+	qDebug() << "Got allSeries with size" << allSeries.size();
+
+	if ( ! allSeries.empty() )
+	{
+		qDebug() << "Detected Garmin file";
+
+		for ( int i = 0; i < allSeries.size(); i++ )
+		{
+			ChronoSeries *series = allSeries.at(i);
+
+			series->enabled = new QCheckBox();
+			series->enabled->setChecked(true);
+
+			series->chargeWeight = new QDoubleSpinBox();
+			series->chargeWeight->setDecimals(2);
+			series->chargeWeight->setSingleStep(0.1);
+			series->chargeWeight->setMinimumWidth(100);
+			series->chargeWeight->setMaximumWidth(100);
+
+			seriesData.append(series);
+		}
+	}
+
+	/* We're finished parsing the file */
+
+	if ( seriesData.empty() )
+	{
+		qDebug() << "Didn't find any chrono data in this file, bail";
+
+		QMessageBox *msg = new QMessageBox();
+		msg->setIcon(QMessageBox::Critical);
+		msg->setText(QString("Unable to find Garmin data in '%1'").arg(path));
+		msg->setWindowTitle("Error");
+		msg->exec();
+	}
+	else
+	{
+		qDebug() << "Detected Garmin file" << path;
+
+		QMessageBox *msg = new QMessageBox();
+		msg->setIcon(QMessageBox::Information);
+		msg->setText(QString("Detected Garmin data\n\nUsing '%1'").arg(path));
+		msg->setWindowTitle("Success");
+		msg->exec();
+
+		// Proceed to display the data
+		DisplaySeriesData();
+	}
+
+}
+
+QList<ChronoSeries *> PowderTest::ExtractGarminSeries_xlsx ( QXlsx::Document &xlsx )
+{
+	QList<ChronoSeries *> allSeries;
+	
+	/*
+	 * for worksheet in XLSX file:
+	 *  set active sheet
+	 *  create curSeries object
+	 *  for row in sheet:
+	 *    add velocity to curSeries
+	 */
+	 
+	int i = 0;
+	foreach ( QString sheetName, xlsx.sheetNames() )
+	{
+		qDebug() << "Sheet: " << sheetName;
+		QXlsx::AbstractSheet *curSheet = xlsx.sheet(sheetName);
+		if ( curSheet == NULL )
+		{
+			qDebug() << "Failed to get sheet, skipping...";
+			continue;
+		}
+		
+		curSheet->workbook()->setActiveSheet(i);
+		
+		QXlsx::Worksheet *worksheet = (QXlsx::Worksheet *)curSheet->workbook()->activeSheet();
+		if ( worksheet == NULL )
+		{
+			qDebug() << "Failed to set active sheet, skipping...";
+			continue;
+		}
+		
+		ChronoSeries *curSeries = new ChronoSeries();
+		curSeries->isValid = false;
+		curSeries->deleted = false;
+		curSeries->seriesNum = i + 1;
+		curSeries->firstDate = QString("-");
+		curSeries->firstTime = QString("");
+		
+		qDebug() << "Series name:" << worksheet->read(1,1).toString();
+		curSeries->name = new QLabel(worksheet->read(1, 1).toString());
+		
+		// Unit of measure
+		if ( worksheet->read(2, 2).toString().contains("FPS") )
+		{
+			curSeries->velocityUnits = "ft/s";
+		}
+		else
+		{
+			curSeries->velocityUnits = "m/s";
+		}
+		
+		int maxRow = 0, maxCol = 0;
+		worksheet->getFullCells(&maxRow, &maxCol);
+		
+		// Iterate through each row of the worksheet, looking for velocities
+		int j;
+		for ( j = 3; j <= maxRow; j++ )
+		{
+			bool ok_shot_id = false;
+			int shot_id = worksheet->read(j, 1).toInt(&ok_shot_id);
+			if ( ok_shot_id )
+			{
+				// We found a row with an integer (shot ID) in the first column
+				
+				bool ok_veloc = false;
+				double veloc = worksheet->read(j, 2).toFloat(&ok_veloc);
+				if ( ok_veloc )
+				{
+					curSeries->muzzleVelocities.append(veloc);
+					qDebug() << "muzzleVelocities +=" << veloc;
+				}
+				else
+				{
+					qDebug() << "Skipping velocity entry:" << worksheet->read(j, 2);
+				}
+			}
+			else
+			{
+				if ( worksheet->read(j, 1).toString().compare("DATE") == 0 )
+				{
+					// Date time
+					QStringList dateTime = worksheet->read(j, 2).toString().split(" at ");
+					if ( dateTime.size() == 2 )
+					{
+						curSeries->firstDate = dateTime.at(0);
+						curSeries->firstTime = dateTime.at(1);
+						qDebug() << "firstDate =" << curSeries->firstDate;
+						qDebug() << "firstTime =" << curSeries->firstTime;
+					}
+					else
+					{
+						qDebug() << "Failed to split datetime cell:" << worksheet->read(j, 2);
+					}
+				}
+			}
+		}
+		
+		// We have a valid series CSV
+		curSeries->isValid = true;
+
+		qDebug() << "Adding curSeries to allSeries";
+		qDebug() << "";
+
+		allSeries.append(curSeries);
+		
+		i += 1;
+	}
+
+	return allSeries;
+}
+
+// https://stackoverflow.com/a/40229435
+bool readCSVRow (QTextStream &in, QStringList *row) {
+
+    static const int delta[][5] = {
+        //  ,    "   \n    ?  eof
+        {   1,   2,  -1,   0,  -1  }, // 0: parsing (store char)
+        {   1,   2,  -1,   0,  -1  }, // 1: parsing (store column)
+        {   3,   4,   3,   3,  -2  }, // 2: quote entered (no-op)
+        {   3,   4,   3,   3,  -2  }, // 3: parsing inside quotes (store char)
+        {   1,   3,  -1,   0,  -1  }, // 4: quote exited (no-op)
+        // -1: end of row, store column, success
+        // -2: eof inside quotes
+    };
+
+    row->clear();
+
+    if (in.atEnd())
+        return false;
+
+    int state = 0, t;
+    char ch;
+    QString cell;
+
+    while (state >= 0) {
+
+        if (in.atEnd())
+            t = 4;
+        else {
+            in >> ch;
+            if (ch == ',') t = 0;
+            else if (ch == '\"') t = 1;
+            else if (ch == '\n') t = 2;
+            else t = 3;
+        }
+
+        state = delta[state][t];
+
+        if (state == 0 || state == 3) {
+            cell += ch;
+        } else if (state == -1 || state == 1) {
+            row->append(cell);
+            cell = "";
+        }
+
+    }
+
+    if (state == -2)
+	{
+        qDebug() << "End-of-file found while inside quotes.";
+		return false;
+	}
+
+    return true;
+
+}
+
+QList<ChronoSeries *> PowderTest::ExtractGarminSeries_csv ( QTextStream &csv )
+{
+	QList<ChronoSeries *> allSeries;
+	ChronoSeries *curSeries = new ChronoSeries();
+	curSeries->isValid = false;
+	curSeries->deleted = false;
+	curSeries->seriesNum = 1;
+	curSeries->velocityUnits = "ft/s";
+	curSeries->firstDate = QString("-");
+	curSeries->firstTime = QString("");
+
+	int i = 0;
+	QStringList cols;
+	while ( readCSVRow(csv, &cols) )
+	{
+		// Trim whitespace from cells
+		QMutableStringListIterator it(cols);
+		while ( it.hasNext() )
+		{
+			it.next();
+			it.setValue(it.value().trimmed());
+		}
+
+		qDebug() << "Line" << i << ":" << cols;
+
+		if ( cols.size() >= 1 )
+		{
+			// Series name in first row, first column
+			if ( i == 0 )
+			{
+				qDebug() << "Series name:" << cols.at(0);
+				curSeries->name = new QLabel(cols.at(0));
+			}
+			// Unit of measure in second row, second column
+			else if ( i == 1 )
+			{
+				if ( cols.at(1).contains("FPS") )
+				{
+					qDebug() << "Velocity units: ft/s";
+					curSeries->velocityUnits = "ft/s";
+				}
+				else
+				{
+					qDebug() << "Velocity units: m/s";
+					curSeries->velocityUnits = "m/s";
+				}
+			}
+			// Date time
+			else if ( cols.at(0).compare("DATE") == 0 )
+			{
+				curSeries->firstDate = cols.at(1);
+				curSeries->firstTime = QString("");
+				qDebug() << "firstDate =" << curSeries->firstDate;
+				qDebug() << "firstTime =" << curSeries->firstTime;
+			}
+			// Look for shot velocity row
+			else
+			{
+				bool ok_shot_id = false;
+				int shot_id = cols.at(0).toInt(&ok_shot_id);
+				if ( ok_shot_id )
+				{
+					// We found a row with an integer (shot ID) in the first column
+					
+					bool ok_veloc = false;
+					QString veloc_str = cols.at(1);
+					veloc_str.replace(",", "."); // handle international-formatted numbers
+					double veloc = veloc_str.toFloat(&ok_veloc);
+					if ( ok_veloc )
+					{
+						curSeries->muzzleVelocities.append(veloc);
+						qDebug() << "muzzleVelocities +=" << veloc;
+					}
+					else
+					{
+						qDebug() << "Skipping velocity entry:" << cols.at(1);
+					}
+				}
+			}
+		}
+
+		i++;
+	}
+
+	// End of the file. Finish parsing the current series.
+	qDebug() << "End of file";
+	
+	// Ensure we have a valid Garmin series
+	if ( curSeries->muzzleVelocities.empty() )
+	{
+		qDebug() << "Series has no velocities, returning invalid.";
+		return allSeries;
+	}
+
+	allSeries.append(curSeries);
+
+	return allSeries;
+}
+
 RoundRobinDialog::RoundRobinDialog ( PowderTest *main, QDialog *parent )
 	: QDialog(parent)
 {
@@ -2768,7 +3166,7 @@ RoundRobinDialog::RoundRobinDialog ( PowderTest *main, QDialog *parent )
 	layout->addWidget(label);
 	layout->addWidget(new QHLine());
 
-	QList<QList<int> > seriesVelocs;
+	QList<QList<double> > seriesVelocs;
 	for ( int i = 0; i < main->seriesData.size(); i++ )
 	{
 		ChronoSeries *series = main->seriesData.at(i);
@@ -2835,7 +3233,7 @@ void PowderTest::rrClicked ( bool state )
 	{
 		qDebug() << "Performing series conversion";
 
-		QList<QList<int> > enabledSeriesVelocs;
+		QList<QList<double> > enabledSeriesVelocs;
 		for ( int i = 0; i < seriesData.size(); i++ )
 		{
 			ChronoSeries *series = seriesData.at(i);
@@ -2850,7 +3248,7 @@ void PowderTest::rrClicked ( bool state )
 		for ( int i = 0; i < enabledSeriesVelocs.at(0).size(); i++ )
 		{
 			// Grab the Xth velocity in each of the enabled series and create a new series with them
-			QList<int> newVelocs;
+			QList<double> newVelocs;
 			for ( int j = 0; j < enabledSeriesVelocs.size(); j++ )
 			{
 				newVelocs.append(enabledSeriesVelocs.at(j).at(i));

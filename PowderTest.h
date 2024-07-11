@@ -19,6 +19,13 @@
 #include <QMainWindow>
 #include <QTextEdit>
 
+#include "xlsxdocument.h"
+#include "xlsxchartsheet.h"
+#include "xlsxcellrange.h"
+#include "xlsxchart.h"
+#include "xlsxrichstring.h"
+#include "xlsxworkbook.h"
+
 #include "ChronoPlotter.h"
 
 namespace Powder
@@ -28,7 +35,7 @@ namespace Powder
 		bool isValid;
 		int seriesNum;
 		QLabel *name;
-		QList<int> muzzleVelocities;
+		QList<double> muzzleVelocities;
 		QString velocityUnits;
 		QLabel *result;
 		QString firstDate;
@@ -61,6 +68,7 @@ namespace Powder
 			void selectLabRadarDirectory(bool);
 			void selectMagnetoSpeedFile(bool);
 			void selectProChronoFile(bool);
+			void selectGarminFile(bool);
 			void selectShotMarkerFile(bool);
 			void manualDataEntry(bool);
 			void rrClicked(bool);
@@ -81,6 +89,8 @@ namespace Powder
 			QList<ChronoSeries *> ExtractMagnetoSpeedSeries ( QTextStream & );
 			QList<ChronoSeries *> ExtractProChronoSeries ( QTextStream & );
 			QList<ChronoSeries *> ExtractProChronoSeries_format2 ( QTextStream & );
+			QList<ChronoSeries *> ExtractGarminSeries_xlsx ( QXlsx::Document & );
+			QList<ChronoSeries *> ExtractGarminSeries_csv ( QTextStream & );
 			QList<ChronoSeries *> ExtractShotMarkerSeriesTar ( QString );
 			void DisplaySeriesData ( void );
 			void renderGraph ( bool );
@@ -90,6 +100,7 @@ namespace Powder
 			QString prevLabRadarDir;
 			QString prevMagnetoSpeedDir;
 			QString prevProChronoDir;
+			QString prevGarminDir;
 			QString prevShotMarkerDir;
 			QString prevSaveDir;
 			QStackedWidget *stackedWidget;
@@ -141,7 +152,7 @@ namespace Powder
 		public:
 			EnterVelocitiesDialog(ChronoSeries *, QDialog *parent = 0);
 			~EnterVelocitiesDialog() {};
-			QList<int> getValues();
+			QList<double> getValues();
 
 		public slots:
 			void textChanged();
