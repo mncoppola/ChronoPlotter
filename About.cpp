@@ -14,7 +14,7 @@ About::About ( QWidget *parent )
 
 	QLabel *about1 = new QLabel();
 	about1->setTextFormat(Qt::RichText);
-	about1->setText(QString("<center><h1>Version %1</h1>By Michael Coppola<br>&#169; 2022 Precision Analytics LLC<p><a href=\"https://chronoplotter.com\">ChronoPlotter.com</a>").arg(CHRONOPLOTTER_VERSION));
+	about1->setText(QString("<center><h1>Version %1</h1>By Michael Coppola<br>&#169; 2024 Precision Analytics LLC<p><a href=\"https://chronoplotter.com\">ChronoPlotter.com</a>").arg(CHRONOPLOTTER_VERSION));
 	about1->setOpenExternalLinks(true);
 
 	QLabel *about2 = new QLabel();
