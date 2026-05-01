@@ -105,6 +105,22 @@ untar(QFile &rf, QString tempDir)
 			return -1;
 		}
 		filesize = parseoct(buff + 124, 12);
+
+		/* Reject path traversal and absolute paths */
+		QString entryName(buff);
+		if (entryName.startsWith('/') || entryName.contains("../")) {
+			qDebug() << " Skipping unsafe pathname" << buff;
+			while (filesize > 0) {
+				bytes_read = rf.read(buff, 512);
+				if (bytes_read < 512) {
+					qDebug() << "Short read: Expected 512, got" << bytes_read;
+					return -1;
+				}
+				filesize -= (filesize < 512) ? filesize : 512;
+			}
+			continue;
+		}
+
 		switch (buff[156]) {
 		case '1':
 			qDebug() << " Ignoring hardlink" << buff;
