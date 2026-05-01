@@ -32,8 +32,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <QDebug>
+#include <QDir>
 #include <QFile>
 #include <QIODevice>
+#include <QStringList>
 
 /* Parse an octal number, ignoring leading and trailing nonsense. */
 static int
@@ -105,6 +107,60 @@ untar(QFile &rf, QString tempDir)
 			return -1;
 		}
 		filesize = parseoct(buff + 124, 12);
+
+		/* Reject path traversal, absolute paths, and Windows drive/UNC paths */
+		QString entryName(buff);
+		QString normalized = entryName;
+		normalized.replace('\\', '/');
+		normalized = QDir::cleanPath(normalized);
+
+		bool unsafe = false;
+
+		if (normalized.isEmpty() || normalized == "." || normalized == "..") {
+			unsafe = true;
+		}
+		if (normalized.startsWith('/')) {
+			unsafe = true;
+		}
+		if (normalized.length() >= 2 && normalized[0].isLetter() && normalized[1] == ':') {
+			unsafe = true;
+		}
+		if (normalized.startsWith("//")) {
+			unsafe = true;
+		}
+		{
+			const QStringList parts = normalized.split('/', Qt::SkipEmptyParts);
+			for (const QString &part : parts) {
+				if (part == "..") {
+					unsafe = true;
+					break;
+				}
+			}
+		}
+
+		/* Final containment check: resolved path must stay under tempDir */
+		if (!unsafe) {
+			QDir rootDir(tempDir);
+			QString rootPath = QDir::cleanPath(rootDir.absolutePath());
+			QString destPath = QDir::cleanPath(rootDir.absoluteFilePath(normalized));
+			if (!(destPath == rootPath || destPath.startsWith(rootPath + '/'))) {
+				unsafe = true;
+			}
+		}
+
+		if (unsafe) {
+			qDebug() << " Skipping unsafe pathname" << buff;
+			while (filesize > 0) {
+				bytes_read = rf.read(buff, 512);
+				if (bytes_read < 512) {
+					qDebug() << "Short read: Expected 512, got" << bytes_read;
+					return -1;
+				}
+				filesize -= (filesize < 512) ? filesize : 512;
+			}
+			continue;
+		}
+
 		switch (buff[156]) {
 		case '1':
 			qDebug() << " Ignoring hardlink" << buff;
@@ -127,9 +183,8 @@ untar(QFile &rf, QString tempDir)
 		default:
 			qDebug() << " Extracting file" << buff;
 
-			QString path(tempDir);
-			path.append("/");
-			path.append(buff);
+			QDir rootDir(tempDir);
+			QString path = QDir::cleanPath(rootDir.absoluteFilePath(normalized));
 
 			wf = new QFile(path);
 			if ( ! wf->open(QIODevice::WriteOnly) )
