@@ -118,9 +118,9 @@ QColor XlsxColor::fromARGBString(const QString &c)
 {
     QColor color;
     if (c.startsWith(u'#')) {
-        color.setNamedColor(c);
+        color = QColor::fromString(c);
     } else {
-        color.setNamedColor(QLatin1Char('#') + c);
+        color = QColor::fromString(QLatin1Char('#') + c);
     }
     return color;
 }

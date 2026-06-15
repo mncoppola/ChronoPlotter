@@ -1,0 +1,14 @@
+Makefile
+.qmake.stash
+*.o
+*.app
+# code-gen cpp files
+moc_About.cpp
+moc_ChronoPlotter.cpp
+moc_PowderTest.cpp
+moc_SeatingDepthTest.cpp
+moc_TunerTest.cpp
+moc_predefs.h
+moc_qcustomplot.cpp
+moc_xlsxdocument.cpp
+qrc_resources.cpp

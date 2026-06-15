@@ -16,8 +16,10 @@ HEADERS += ChronoPlotter.h qcustomplot/qcustomplot.h untar.h miniz.h PowderTest.
 SOURCES += ChronoPlotter.cpp qcustomplot/qcustomplot.cpp untar.cpp miniz.c PowderTest.cpp SeatingDepthTest.cpp TunerTest.cpp About.cpp
 QT += widgets printsupport
 
-CONFIG += console
+CONFIG += console c++17
 
 RESOURCES += resources.qrc
 
 RC_ICONS = images/icons/icon.ico
+ICON = images/icons/icon.icns
+QMAKE_INFO_PLIST = Info.plist

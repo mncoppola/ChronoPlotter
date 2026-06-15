@@ -201,15 +201,13 @@ template double sampleStdev<QList<double> >(QList<double>);
 
 void MainWindow::closeEvent ( QCloseEvent *event )
 {
-	qDebug() << "closeEvent called";
-
-	event->ignore();
-
-	QMessageBox *box = new QMessageBox(QMessageBox::Question, "ChronoPlotter", "Are you sure you want to exit?", QMessageBox::Yes | QMessageBox::Cancel, this);
-
-	QObject::connect(box->button(QMessageBox::Yes), &QAbstractButton::clicked, this, &QApplication::quit);
-	QObject::connect(box->button(QMessageBox::Cancel), &QAbstractButton::clicked, box, &QObject::deleteLater);
-	box->show();
+	auto reply = QMessageBox::question(this, "ChronoPlotter", "Are you sure you want to exit?",
+	                                   QMessageBox::Yes | QMessageBox::Cancel);
+	if (reply == QMessageBox::Yes) {
+		event->accept();
+	} else {
+		event->ignore();
+	}
 }
 
 int main ( int argc, char *argv[] )
