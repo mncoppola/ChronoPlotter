@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.*'
+          host: 'mac'
+          target: 'desktop'
+          arch: 'clang_64'
+
+      - name: Install cppcheck
+        run: brew install cppcheck
+
+      - name: Build
+        run: |
+          qmake CONFIG+=debug ChronoPlotter.pro
+          make -j$(sysctl -n hw.logicalcpu)
+
+      - name: Test
+        run: make test

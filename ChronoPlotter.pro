@@ -23,3 +23,13 @@ RESOURCES += resources.qrc
 RC_ICONS = images/icons/icon.ico
 ICON = images/icons/icon.icns
 QMAKE_INFO_PLIST = Info.plist
+
+verify_tag.target = verify-tag
+verify_tag.commands = @bash scripts/verify-tag.sh
+
+lint.target = lint
+lint.commands = @bash scripts/lint.sh
+
+test.target = test
+test.commands = @bash scripts/lint.sh
+QMAKE_EXTRA_TARGETS += verify_tag lint test

@@ -73,7 +73,7 @@ verify_checksum(const char *p)
 	for (n = 0; n < 512; ++n) {
 		if (n < 148 || n > 155)
 			/* Standard tar checksum adds unsigned bytes. */
-			u += ((unsigned char *)p)[n];
+			u += reinterpret_cast<const unsigned char *>(p)[n];
 		else
 			u += 0x20;
 
@@ -87,11 +87,10 @@ untar(QFile &rf, QString tempDir)
 {
 	char buff[512];
 	QFile *wf = NULL;
-	size_t bytes_read;
-	int filesize;
 
 	for (;;) {
-		bytes_read = rf.read(buff, 512);
+		size_t bytes_read = rf.read(buff, 512);
+		int filesize;
 		if (bytes_read < 512) {
 			qDebug() << "Short read: expected 512, got" << bytes_read;
 			return -1;

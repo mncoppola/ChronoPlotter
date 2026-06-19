@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+env:
+  QT_VERSION: '6.*'
+
+jobs:
+  build-macos:
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify tag matches ChronoPlotter.h version
+        run: bash scripts/verify-tag.sh
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: 'mac'
+          target: 'desktop'
+          arch: 'clang_64'
+
+      - name: Build
+        run: |
+          qmake CONFIG+=release ChronoPlotter.pro
+          make -j$(sysctl -n hw.logicalcpu)
+
+      - name: Package DMG
+        run: |
+          macdeployqt ChronoPlotter.app -dmg
+          mv ChronoPlotter.dmg ChronoPlotter-${{ github.ref_name }}-macos.dmg
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: ChronoPlotter-${{ github.ref_name }}-macos.dmg
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify tag matches ChronoPlotter.h version
+        run: bash scripts/verify-tag.sh
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build
+        run: |
+          qmake CONFIG+=release ChronoPlotter.pro
+          nmake
+
+      - name: Deploy Qt DLLs
+        run: windeployqt release\ChronoPlotter.exe
+
+      - name: Package ZIP
+        shell: pwsh
+        run: Compress-Archive -Path release\* -DestinationPath ChronoPlotter-${{ github.ref_name }}-windows.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: ChronoPlotter-${{ github.ref_name }}-windows.zip
+
+  sign-and-release:
+    runs-on: ubuntu-latest
+    needs: [build-macos, build-windows]
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v7.0.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Create checksums and sign
+        run: |
+          cd artifacts
+          sha256sum *.dmg *.zip > SHA256SUMS
+          gpg --armor --detach-sign SHA256SUMS
+          for f in *.dmg *.zip; do
+            gpg --armor --detach-sign "$f"
+          done
+
+      - name: Upload to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref }}
+          file: artifacts/*
+          file_glob: true
